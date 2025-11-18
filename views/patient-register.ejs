@@ -533,6 +533,20 @@
             return true;
         }
 
+        // Auto-format date as user types (adds slashes automatically)
+        document.getElementById('dob')?.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+
+            if (value.length >= 2) {
+                value = value.substring(0, 2) + '/' + value.substring(2);
+            }
+            if (value.length >= 5) {
+                value = value.substring(0, 5) + '/' + value.substring(5, 9);
+            }
+
+            e.target.value = value;
+        });
+
         // Add date validation on blur
         document.getElementById('dob')?.addEventListener('blur', (e) => {
             const value = e.target.value.trim();
