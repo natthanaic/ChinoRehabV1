@@ -31,7 +31,10 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- 4. Add unique constraint on Thai ID (pid)
--- First, check if index exists and drop it
+-- First, convert empty strings to NULL (so we can have multiple NULLs but unique non-NULL values)
+UPDATE `patients` SET `pid` = NULL WHERE `pid` = '' OR `pid` IS NULL;
+
+-- Check if old index exists and drop it
 SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
                WHERE table_schema = DATABASE()
                AND table_name = 'patients'
@@ -42,6 +45,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- Add unique constraint on pid (if not exists)
+-- Note: MySQL allows multiple NULL values in UNIQUE columns
 SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
                WHERE table_schema = DATABASE()
                AND table_name = 'patients'
@@ -51,12 +55,15 @@ PREPARE stmt FROM @sqlstmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- 5. Add index on passport_no (if not exists)
+-- 5. Handle passport_no - convert empty strings to NULL
+UPDATE `patients` SET `passport_no` = NULL WHERE `passport_no` = '' OR `passport_no` IS NULL;
+
+-- Add index on passport_no (if not exists)
 SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
                WHERE table_schema = DATABASE()
                AND table_name = 'patients'
                AND index_name = 'idx_patient_passport');
-SET @sqlstmt := IF(@exist = 0, 'ALTER TABLE `patients` ADD INDEX `idx_patient_passport` (`passport_no`)', 'SELECT 1');
+SET @sqlstmt := IF(@exist = 0, 'ALTER TABLE `patients` ADD INDEX `idx_patient_passport` (`passport_no`)', 'SELECT "idx_patient_passport already exists" AS Info');
 PREPARE stmt FROM @sqlstmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
