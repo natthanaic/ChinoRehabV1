@@ -533,9 +533,23 @@
             return true;
         }
 
-        // Auto-format date as user types (adds slashes automatically)
+        // Auto-format date as user types (adds slashes automatically if typing numbers only)
         document.getElementById('dob')?.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            let value = e.target.value;
+
+            // If user is typing with slashes, allow it (don't reformat)
+            if (value.includes('/')) {
+                // Just limit to DD/MM/YYYY format
+                const parts = value.split('/');
+                if (parts[0] && parts[0].length > 2) parts[0] = parts[0].substring(0, 2);
+                if (parts[1] && parts[1].length > 2) parts[1] = parts[1].substring(0, 2);
+                if (parts[2] && parts[2].length > 4) parts[2] = parts[2].substring(0, 4);
+                e.target.value = parts.join('/');
+                return;
+            }
+
+            // If typing numbers only, auto-add slashes
+            value = value.replace(/\D/g, ''); // Remove non-digits
 
             if (value.length >= 2) {
                 value = value.substring(0, 2) + '/' + value.substring(2);
