@@ -1,0 +1,834 @@
+<!--
+=============================================================================
+HL7 FHIR-Compliant Patient Registration Form - EJS Template Design
+=============================================================================
+File: views/hl7-patient-register.ejs
+Version: 1.0
+Date: 2025-11-18
+Description: Patient registration form following HL7 FHIR R4 standards
+Standards: HL7 FHIR R4, Bootstrap 5, Accessibility (WCAG 2.1)
+=============================================================================
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HL7 Patient Registration - ChinoRehab System</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Flatpickr Date Picker -->
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
+
+    <!-- Custom Styles -->
+    <style>
+        /* Sidebar styling */
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.85);
+            padding: 0.75rem 1rem;
+            margin: 0.25rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+
+        /* Form section styling */
+        .form-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .form-section.collapsible {
+            cursor: pointer;
+        }
+
+        .form-section h5 {
+            color: #667eea;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #667eea;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .form-section h5 i {
+            margin-right: 0.5rem;
+        }
+
+        /* Required field marker */
+        .required::after {
+            content: " *";
+            color: #dc3545;
+            font-weight: bold;
+        }
+
+        /* Input validation states */
+        .form-control.is-valid,
+        .form-select.is-valid {
+            border-color: #28a745;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3e%3cpath fill='%2328a745' d='M2.3 6.73L.6 4.53c-.4-1.04.46-1.4 1.1-.8l1.1 1.4 3.4-3.8c.6-.63 1.6-.27 1.2.7l-4 4.6c-.43.5-.8.4-1.1.1z'/%3e%3c/svg%3e");
+        }
+
+        .form-control.is-invalid,
+        .form-select.is-invalid {
+            border-color: #dc3545;
+        }
+
+        /* Badge styling for read-only fields */
+        .badge-auto {
+            background-color: #6c757d;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+
+        /* Collapse indicator */
+        .collapse-indicator {
+            transition: transform 0.3s ease;
+        }
+
+        .collapse-indicator.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        /* Help text */
+        .form-text {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+
+        /* Alert styling */
+        .alert-info {
+            background-color: #e7f3ff;
+            border-color: #b3d9ff;
+            color: #004085;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Mobile navbar toggle -->
+    <nav class="navbar navbar-dark bg-dark d-md-none">
+        <div class="container-fluid">
+            <span class="navbar-brand">ChinoRehab System</span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <%- include('partials/sidebar', { user, activePage: 'hl7-patient-register' }) %>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <!-- Page Header -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="bi bi-person-plus-fill me-2"></i>
+                        Register New Patient (HL7 FHIR)
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="history.back()">
+                            <i class="bi bi-arrow-left me-1"></i>Back
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Info Alert -->
+                <div class="alert alert-info mb-4" role="alert">
+                    <i class="bi bi-info-circle-fill me-2"></i>
+                    This form follows <strong>HL7 FHIR R4</strong> standards for interoperable healthcare data.
+                    Fields marked with <span class="text-danger">*</span> are required.
+                </div>
+
+                <!-- Main Form -->
+                <form id="hl7PatientForm" novalidate>
+
+                    <!-- =====================================================
+                         SECTION 1: FHIR METADATA & IDENTIFIERS
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-fingerprint"></i>Patient Identifiers</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- FHIR ID (Auto-generated UUID) -->
+                            <div class="col-md-4 mb-3">
+                                <label for="fhir_id" class="form-label">
+                                    FHIR Resource ID
+                                    <span class="badge badge-auto">Auto</span>
+                                </label>
+                                <input type="text" class="form-control" id="fhir_id" readonly
+                                       placeholder="UUID will be generated">
+                                <div class="form-text">Unique FHIR identifier (UUID v4)</div>
+                            </div>
+
+                            <!-- Hospital Number (MRN) -->
+                            <div class="col-md-4 mb-3">
+                                <label for="hn" class="form-label required">HN (Hospital Number)</label>
+                                <input type="text" class="form-control" id="hn" required
+                                       placeholder="PT25XXX">
+                                <div class="form-text">Medical Record Number</div>
+                                <div class="invalid-feedback">Please provide a Hospital Number</div>
+                            </div>
+
+                            <!-- PT Number -->
+                            <div class="col-md-4 mb-3">
+                                <label for="pt_number" class="form-label required">PT Number</label>
+                                <input type="text" class="form-control" id="pt_number" required
+                                       placeholder="PT20251118HHMMSS">
+                                <div class="form-text">Physical Therapy Number</div>
+                                <div class="invalid-feedback">Please provide a PT Number</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- National ID / Thai ID -->
+                            <div class="col-md-4 mb-3">
+                                <label for="national_id" class="form-label">National ID / Thai ID</label>
+                                <input type="text" class="form-control" id="national_id"
+                                       maxlength="20" placeholder="1234567890123">
+                                <div class="form-text">13 digits for Thai citizens</div>
+                            </div>
+
+                            <!-- Passport Number -->
+                            <div class="col-md-4 mb-3">
+                                <label for="passport_no" class="form-label">Passport Number</label>
+                                <input type="text" class="form-control" id="passport_no"
+                                       placeholder="A12345678">
+                                <div class="form-text">For non-Thai citizens</div>
+                            </div>
+
+                            <!-- SSN (Optional) -->
+                            <div class="col-md-4 mb-3">
+                                <label for="ssn" class="form-label">SSN / Other ID</label>
+                                <input type="text" class="form-control" id="ssn"
+                                       placeholder="XXX-XX-XXXX">
+                                <div class="form-text">Social Security or other ID</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 2: NAME (FHIR HumanName)
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-person-vcard"></i>Name Information</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Name Use -->
+                            <div class="col-md-3 mb-3">
+                                <label for="name_use" class="form-label required">Name Use</label>
+                                <select class="form-select" id="name_use" required>
+                                    <option value="official" selected>Official</option>
+                                    <option value="usual">Usual</option>
+                                    <option value="temp">Temporary</option>
+                                    <option value="nickname">Nickname</option>
+                                    <option value="old">Old</option>
+                                    <option value="maiden">Maiden</option>
+                                </select>
+                                <div class="form-text">How this name is used</div>
+                            </div>
+
+                            <!-- Prefix / Title -->
+                            <div class="col-md-3 mb-3">
+                                <label for="name_prefix" class="form-label">Prefix/Title</label>
+                                <select class="form-select" id="name_prefix">
+                                    <option value="">Select</option>
+                                    <option value="Mr.">Mr.</option>
+                                    <option value="Mrs.">Mrs.</option>
+                                    <option value="Ms.">Ms.</option>
+                                    <option value="Miss">Miss</option>
+                                    <option value="Dr.">Dr.</option>
+                                    <option value="Prof.">Prof.</option>
+                                </select>
+                            </div>
+
+                            <!-- Given Name (First Name) -->
+                            <div class="col-md-3 mb-3">
+                                <label for="name_given" class="form-label required">Given Name</label>
+                                <input type="text" class="form-control" id="name_given" required
+                                       placeholder="First name">
+                                <div class="invalid-feedback">Please provide given name</div>
+                            </div>
+
+                            <!-- Middle Name -->
+                            <div class="col-md-3 mb-3">
+                                <label for="name_middle" class="form-label">Middle Name</label>
+                                <input type="text" class="form-control" id="name_middle"
+                                       placeholder="Middle name">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Family Name (Last Name) -->
+                            <div class="col-md-4 mb-3">
+                                <label for="name_family" class="form-label required">Family Name</label>
+                                <input type="text" class="form-control" id="name_family" required
+                                       placeholder="Last name">
+                                <div class="invalid-feedback">Please provide family name</div>
+                            </div>
+
+                            <!-- Suffix -->
+                            <div class="col-md-4 mb-3">
+                                <label for="name_suffix" class="form-label">Suffix</label>
+                                <input type="text" class="form-control" id="name_suffix"
+                                       placeholder="Jr., Sr., III, etc.">
+                            </div>
+
+                            <!-- Full Text Name -->
+                            <div class="col-md-4 mb-3">
+                                <label for="name_text" class="form-label">Full Name (Display)</label>
+                                <input type="text" class="form-control" id="name_text" readonly
+                                       placeholder="Auto-generated from fields">
+                                <div class="form-text">Auto-filled from name parts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 3: DEMOGRAPHICS
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-calendar3"></i>Demographics</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Birth Date -->
+                            <div class="col-md-3 mb-3">
+                                <label for="birth_date" class="form-label required">Date of Birth</label>
+                                <input type="text" class="form-control" id="birth_date" required
+                                       placeholder="YYYY-MM-DD">
+                                <div class="form-text">ISO 8601 format</div>
+                                <div class="invalid-feedback">Please provide birth date</div>
+                            </div>
+
+                            <!-- Gender -->
+                            <div class="col-md-3 mb-3">
+                                <label for="gender" class="form-label required">Gender</label>
+                                <select class="form-select" id="gender" required>
+                                    <option value="">Select</option>
+                                    <option value="male">Male</option>
+                                    <option value="female">Female</option>
+                                    <option value="other">Other</option>
+                                    <option value="unknown">Unknown</option>
+                                </select>
+                                <div class="form-text">Administrative gender</div>
+                                <div class="invalid-feedback">Please select gender</div>
+                            </div>
+
+                            <!-- Marital Status -->
+                            <div class="col-md-3 mb-3">
+                                <label for="marital_status" class="form-label">Marital Status</label>
+                                <select class="form-select" id="marital_status">
+                                    <option value="">Select</option>
+                                    <option value="S">Single (Never Married)</option>
+                                    <option value="M">Married</option>
+                                    <option value="D">Divorced</option>
+                                    <option value="W">Widowed</option>
+                                    <option value="T">Domestic Partner</option>
+                                    <option value="L">Legally Separated</option>
+                                    <option value="A">Annulled</option>
+                                    <option value="P">Polygamous</option>
+                                    <option value="U">Unmarried</option>
+                                </select>
+                                <div class="form-text">HL7 v3 code system</div>
+                            </div>
+
+                            <!-- Primary Language -->
+                            <div class="col-md-3 mb-3">
+                                <label for="language_primary" class="form-label">Primary Language</label>
+                                <select class="form-select" id="language_primary">
+                                    <option value="">Select</option>
+                                    <option value="th">Thai (ไทย)</option>
+                                    <option value="en">English</option>
+                                    <option value="zh">Chinese (中文)</option>
+                                    <option value="fr">French (Français)</option>
+                                    <option value="de">German (Deutsch)</option>
+                                    <option value="ja">Japanese (日本語)</option>
+                                    <option value="ko">Korean (한국어)</option>
+                                    <option value="es">Spanish (Español)</option>
+                                </select>
+                                <div class="form-text">ISO 639-1 code</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Deceased -->
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Patient Deceased?</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="deceased_boolean">
+                                    <label class="form-check-label" for="deceased_boolean">
+                                        Yes, patient is deceased
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Death Date/Time (shown only if deceased) -->
+                            <div class="col-md-3 mb-3" id="death_datetime_wrapper" style="display: none;">
+                                <label for="deceased_date_time" class="form-label">Date/Time of Death</label>
+                                <input type="datetime-local" class="form-control" id="deceased_date_time">
+                                <div class="form-text">ISO 8601 datetime</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 4: TELECOM / CONTACT POINTS
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-telephone-fill"></i>Contact Information</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Primary Phone -->
+                            <div class="col-md-3 mb-3">
+                                <label for="telecom_phone" class="form-label">Phone (Home/Work)</label>
+                                <input type="tel" class="form-control" id="telecom_phone"
+                                       placeholder="+66-12-345-6789">
+                                <div class="form-text">E.164 format recommended</div>
+                            </div>
+
+                            <!-- Mobile Phone -->
+                            <div class="col-md-3 mb-3">
+                                <label for="telecom_mobile" class="form-label">Mobile Phone</label>
+                                <input type="tel" class="form-control" id="telecom_mobile"
+                                       placeholder="+66-89-123-4567">
+                            </div>
+
+                            <!-- Email -->
+                            <div class="col-md-4 mb-3">
+                                <label for="telecom_email" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="telecom_email"
+                                       placeholder="patient@example.com">
+                                <div class="form-text">RFC 5322 format</div>
+                            </div>
+
+                            <!-- Fax -->
+                            <div class="col-md-2 mb-3">
+                                <label for="telecom_fax" class="form-label">Fax</label>
+                                <input type="tel" class="form-control" id="telecom_fax"
+                                       placeholder="Fax number">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Telecom Use -->
+                            <div class="col-md-3 mb-3">
+                                <label for="telecom_use" class="form-label">Contact Use</label>
+                                <select class="form-select" id="telecom_use">
+                                    <option value="home" selected>Home</option>
+                                    <option value="work">Work</option>
+                                    <option value="mobile">Mobile</option>
+                                    <option value="temp">Temporary</option>
+                                    <option value="old">Old</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 5: ADDRESS (FHIR Address)
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-geo-alt-fill"></i>Address Information</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Address Use -->
+                            <div class="col-md-3 mb-3">
+                                <label for="address_use" class="form-label">Address Use</label>
+                                <select class="form-select" id="address_use">
+                                    <option value="home" selected>Home</option>
+                                    <option value="work">Work</option>
+                                    <option value="temp">Temporary</option>
+                                    <option value="old">Old</option>
+                                    <option value="billing">Billing</option>
+                                </select>
+                            </div>
+
+                            <!-- Address Type -->
+                            <div class="col-md-3 mb-3">
+                                <label for="address_type" class="form-label">Address Type</label>
+                                <select class="form-select" id="address_type">
+                                    <option value="both" selected>Both</option>
+                                    <option value="postal">Postal</option>
+                                    <option value="physical">Physical</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Street Line 1 -->
+                            <div class="col-md-6 mb-3">
+                                <label for="address_line1" class="form-label">Street Address Line 1</label>
+                                <input type="text" class="form-control" id="address_line1"
+                                       placeholder="123 Main Street">
+                            </div>
+
+                            <!-- Street Line 2 -->
+                            <div class="col-md-6 mb-3">
+                                <label for="address_line2" class="form-label">Street Address Line 2</label>
+                                <input type="text" class="form-control" id="address_line2"
+                                       placeholder="Apartment, Unit, Suite, etc.">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- City -->
+                            <div class="col-md-3 mb-3">
+                                <label for="address_city" class="form-label">City</label>
+                                <input type="text" class="form-control" id="address_city"
+                                       placeholder="Bangkok">
+                            </div>
+
+                            <!-- District -->
+                            <div class="col-md-3 mb-3">
+                                <label for="address_district" class="form-label">District/County</label>
+                                <input type="text" class="form-control" id="address_district"
+                                       placeholder="Amphoe/District">
+                            </div>
+
+                            <!-- State/Province -->
+                            <div class="col-md-3 mb-3">
+                                <label for="address_state" class="form-label">State/Province</label>
+                                <input type="text" class="form-control" id="address_state"
+                                       placeholder="Changwat/Province">
+                            </div>
+
+                            <!-- Postal Code -->
+                            <div class="col-md-3 mb-3">
+                                <label for="address_postal_code" class="form-label">Postal Code</label>
+                                <input type="text" class="form-control" id="address_postal_code"
+                                       placeholder="10100">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Country -->
+                            <div class="col-md-6 mb-3">
+                                <label for="address_country" class="form-label">Country</label>
+                                <select class="form-select" id="address_country">
+                                    <option value="">Select Country</option>
+                                    <option value="TH" selected>Thailand</option>
+                                    <option value="US">United States</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="CN">China</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="KR">South Korea</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <!-- Add more countries as needed -->
+                                </select>
+                                <div class="form-text">ISO 3166-1 alpha-2 code</div>
+                            </div>
+
+                            <!-- Full Address Text (Read-only) -->
+                            <div class="col-md-6 mb-3">
+                                <label for="address_text" class="form-label">Full Address (Display)</label>
+                                <textarea class="form-control" id="address_text" rows="2" readonly
+                                          placeholder="Auto-generated from fields"></textarea>
+                                <div class="form-text">Auto-filled from address parts</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 6: EMERGENCY CONTACT
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-person-exclamation"></i>Emergency Contact</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Emergency Contact Name -->
+                            <div class="col-md-4 mb-3">
+                                <label for="emergency_contact_name" class="form-label">Contact Name</label>
+                                <input type="text" class="form-control" id="emergency_contact_name"
+                                       placeholder="Full name">
+                            </div>
+
+                            <!-- Relationship -->
+                            <div class="col-md-4 mb-3">
+                                <label for="emergency_contact_relationship" class="form-label">Relationship</label>
+                                <select class="form-select" id="emergency_contact_relationship">
+                                    <option value="">Select</option>
+                                    <option value="spouse">Spouse</option>
+                                    <option value="parent">Parent</option>
+                                    <option value="child">Child</option>
+                                    <option value="sibling">Sibling</option>
+                                    <option value="friend">Friend</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+
+                            <!-- Emergency Phone -->
+                            <div class="col-md-4 mb-3">
+                                <label for="emergency_contact_phone" class="form-label">Contact Phone</label>
+                                <input type="tel" class="form-control" id="emergency_contact_phone"
+                                       placeholder="+66-XX-XXX-XXXX">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Emergency Email -->
+                            <div class="col-md-6 mb-3">
+                                <label for="emergency_contact_email" class="form-label">Contact Email</label>
+                                <input type="email" class="form-control" id="emergency_contact_email"
+                                       placeholder="contact@example.com">
+                            </div>
+
+                            <!-- Emergency Address -->
+                            <div class="col-md-6 mb-3">
+                                <label for="emergency_contact_address" class="form-label">Contact Address</label>
+                                <textarea class="form-control" id="emergency_contact_address" rows="2"
+                                          placeholder="Full address"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 7: CLINICAL INFORMATION
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-heart-pulse-fill"></i>Clinical Information</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Primary Diagnosis -->
+                            <div class="col-md-12 mb-3">
+                                <label for="primary_diagnosis" class="form-label required">Primary Diagnosis</label>
+                                <textarea class="form-control" id="primary_diagnosis" rows="3" required
+                                          placeholder="Chief complaint or primary diagnosis"></textarea>
+                                <div class="invalid-feedback">Please provide primary diagnosis</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Medical History -->
+                            <div class="col-md-6 mb-3">
+                                <label for="medical_history" class="form-label">Medical History</label>
+                                <textarea class="form-control" id="medical_history" rows="3"
+                                          placeholder="Past medical conditions, surgeries, etc."></textarea>
+                            </div>
+
+                            <!-- Allergies -->
+                            <div class="col-md-6 mb-3">
+                                <label for="allergies" class="form-label">Allergies</label>
+                                <textarea class="form-control" id="allergies" rows="3"
+                                          placeholder="Known allergies (medications, food, environmental)"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Current Medications -->
+                            <div class="col-md-12 mb-3">
+                                <label for="medications" class="form-label">Current Medications</label>
+                                <textarea class="form-control" id="medications" rows="3"
+                                          placeholder="List of current medications with dosages"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 8: REHABILITATION PLAN (Custom Extension)
+                    ===================================================== -->
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-clipboard2-pulse-fill"></i>Rehabilitation Plan</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Rehab Goals (Multi-select) -->
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Rehabilitation Goals</label>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Pain reduction" id="goal1">
+                                            <label class="form-check-label" for="goal1">Pain reduction</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Improve ROM" id="goal2">
+                                            <label class="form-check-label" for="goal2">Improve range of motion</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Strengthen muscles" id="goal3">
+                                            <label class="form-check-label" for="goal3">Strengthen muscles</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="Improve function" id="goal4">
+                                            <label class="form-check-label" for="goal4">Improve function</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <input type="text" class="form-control mt-2" id="rehab_goals_other"
+                                       placeholder="Other goals (comma-separated)">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Body Area -->
+                            <div class="col-md-4 mb-3">
+                                <label for="body_area" class="form-label">Body Area Affected</label>
+                                <select class="form-select" id="body_area">
+                                    <option value="">Select</option>
+                                    <option value="Neck">Neck</option>
+                                    <option value="Shoulder">Shoulder</option>
+                                    <option value="Elbow">Elbow</option>
+                                    <option value="Wrist/Hand">Wrist/Hand</option>
+                                    <option value="Upper Back">Upper Back</option>
+                                    <option value="Lower Back">Lower Back</option>
+                                    <option value="Hip">Hip</option>
+                                    <option value="Knee">Knee</option>
+                                    <option value="Ankle/Foot">Ankle/Foot</option>
+                                    <option value="Multiple Areas">Multiple Areas</option>
+                                </select>
+                            </div>
+
+                            <!-- Treatment Frequency -->
+                            <div class="col-md-4 mb-3">
+                                <label for="treatment_frequency" class="form-label">Treatment Frequency</label>
+                                <select class="form-select" id="treatment_frequency">
+                                    <option value="">Select</option>
+                                    <option value="Daily">Daily</option>
+                                    <option value="3 times/week">3 times/week</option>
+                                    <option value="2 times/week">2 times/week</option>
+                                    <option value="Weekly">Weekly</option>
+                                    <option value="As needed">As needed</option>
+                                </select>
+                            </div>
+
+                            <!-- Expected Duration -->
+                            <div class="col-md-4 mb-3">
+                                <label for="expected_duration" class="form-label">Expected Duration</label>
+                                <select class="form-select" id="expected_duration">
+                                    <option value="">Select</option>
+                                    <option value="1-2 weeks">1-2 weeks</option>
+                                    <option value="2-4 weeks">2-4 weeks</option>
+                                    <option value="1-2 months">1-2 months</option>
+                                    <option value="2-3 months">2-3 months</option>
+                                    <option value="3-6 months">3-6 months</option>
+                                    <option value="Long-term">Long-term (6+ months)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Precautions -->
+                            <div class="col-md-6 mb-3">
+                                <label for="precautions" class="form-label">Precautions</label>
+                                <textarea class="form-control" id="precautions" rows="2"
+                                          placeholder="Clinical precautions for treatment"></textarea>
+                            </div>
+
+                            <!-- Contraindications -->
+                            <div class="col-md-6 mb-3">
+                                <label for="contraindications" class="form-label">Contraindications</label>
+                                <textarea class="form-control" id="contraindications" rows="2"
+                                          placeholder="Treatment contraindications"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <!-- Doctor Notes -->
+                            <div class="col-md-12 mb-3">
+                                <label for="doctor_notes" class="form-label">Doctor's Notes</label>
+                                <textarea class="form-control" id="doctor_notes" rows="3"
+                                          placeholder="Referring physician notes"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- =====================================================
+                         SECTION 9: ORGANIZATION
+                    ===================================================== -->
+                    <% if (user.role === 'ADMIN' || user.role === 'PT' || user.role === 'PT_ADMIN') { %>
+                    <div class="form-section">
+                        <h5>
+                            <span><i class="bi bi-building"></i>Managing Organization</span>
+                        </h5>
+
+                        <div class="row">
+                            <!-- Clinic Selection -->
+                            <div class="col-md-6 mb-3">
+                                <label for="managing_organization" class="form-label required">Clinic</label>
+                                <select class="form-select" id="managing_organization" required>
+                                    <option value="">Select Clinic</option>
+                                    <!-- Options loaded via JavaScript -->
+                                </select>
+                                <div class="form-text">FHIR Organization reference</div>
+                                <div class="invalid-feedback">Please select a clinic</div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } %>
+
+                    <!-- =====================================================
+                         ACTION BUTTONS
+                    ===================================================== -->
+                    <div class="text-center mt-4 mb-5">
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="bi bi-save me-2"></i>Register Patient
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-lg ms-3 px-5" onclick="clearForm()">
+                            <i class="bi bi-x-circle me-2"></i>Clear Form
+                        </button>
+                    </div>
+
+                </form>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="/js/hl7-patient-register.js"></script>
+</body>
+</html>
