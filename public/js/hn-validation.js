@@ -273,9 +273,15 @@ function handleViewPatient(patientId) {
 }
 
 function handleCreatePN(patientId, patientHN) {
-    if (confirm(`Create a new PN (Patient Number) case for patient ${patientHN}?\n\nThis will redirect you to the PN creation page.`)) {
-        window.location.href = `/pn/create?patient_id=${patientId}&hn=${patientHN}`;
-    }
+    // TODO: Implement PN creation page
+    alert(`To create a new PN (Patient Number) case for patient ${patientHN}:\n\n` +
+          `1. Go to the patient detail page\n` +
+          `2. Click "View Patient Details" button\n` +
+          `3. Create a new treatment case from there\n\n` +
+          `Patient ID: ${patientId}`);
+
+    // Optionally redirect to patient detail page instead
+    // window.location.href = `/patients/${patientId}`;
 }
 
 function updateWorkflowStep(step) {
