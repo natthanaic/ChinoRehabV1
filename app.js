@@ -1380,87 +1380,63 @@ function validatePassportID(passport) {
 // Generate next PTHN with format PTYYXXXX
 async function generateNextPTHN(db) {
     const currentYear = parseInt(moment().format('YY'));
+    let connection;
 
-    return new Promise((resolve, reject) => {
-        db.getConnection((err, connection) => {
-            if (err) return reject(err);
+    try {
+        // Get connection from pool (mysql2/promise)
+        connection = await db.getConnection();
 
-            connection.beginTransaction(async (err) => {
-                if (err) {
-                    connection.release();
-                    return reject(err);
-                }
+        // Start transaction
+        await connection.beginTransaction();
 
-                const getSequenceQuery = `
-                    SELECT last_sequence
-                    FROM pthn_sequence
-                    WHERE year = ?
-                    FOR UPDATE
-                `;
+        // Get current sequence with lock
+        const [rows] = await connection.query(
+            'SELECT last_sequence FROM pthn_sequence WHERE year = ? FOR UPDATE',
+            [currentYear]
+        );
 
-                connection.query(getSequenceQuery, [currentYear], (err, results) => {
-                    if (err) {
-                        return connection.rollback(() => {
-                            connection.release();
-                            reject(err);
-                        });
-                    }
+        let nextSequence;
 
-                    let nextSequence;
+        if (rows.length === 0) {
+            // First PTHN of the year
+            nextSequence = 1;
+            await connection.query(
+                'INSERT INTO pthn_sequence (year, last_sequence) VALUES (?, ?)',
+                [currentYear, nextSequence]
+            );
+        } else {
+            // Increment sequence
+            nextSequence = rows[0].last_sequence + 1;
 
-                    if (results.length === 0) {
-                        nextSequence = 1;
-                        const insertQuery = `INSERT INTO pthn_sequence (year, last_sequence) VALUES (?, ?)`;
+            if (nextSequence > 9999) {
+                throw new Error('PTHN sequence limit reached for this year (max 9999)');
+            }
 
-                        connection.query(insertQuery, [currentYear, nextSequence], (err) => {
-                            if (err) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    reject(err);
-                                });
-                            }
-                            commitAndResolve(nextSequence);
-                        });
-                    } else {
-                        nextSequence = results[0].last_sequence + 1;
+            await connection.query(
+                'UPDATE pthn_sequence SET last_sequence = ? WHERE year = ?',
+                [nextSequence, currentYear]
+            );
+        }
 
-                        if (nextSequence > 9999) {
-                            return connection.rollback(() => {
-                                connection.release();
-                                reject(new Error('PTHN sequence limit reached for this year (max 9999)'));
-                            });
-                        }
+        // Commit transaction
+        await connection.commit();
 
-                        const updateQuery = `UPDATE pthn_sequence SET last_sequence = ? WHERE year = ?`;
+        // Format PTHN
+        const pthn = `PT${currentYear.toString().padStart(2, '0')}${nextSequence.toString().padStart(4, '0')}`;
+        return pthn;
 
-                        connection.query(updateQuery, [nextSequence, currentYear], (err) => {
-                            if (err) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    reject(err);
-                                });
-                            }
-                            commitAndResolve(nextSequence);
-                        });
-                    }
-
-                    function commitAndResolve(sequence) {
-                        connection.commit((err) => {
-                            if (err) {
-                                return connection.rollback(() => {
-                                    connection.release();
-                                    reject(err);
-                                });
-                            }
-                            connection.release();
-                            const pthn = `PT${currentYear.toString().padStart(2, '0')}${sequence.toString().padStart(4, '0')}`;
-                            resolve(pthn);
-                        });
-                    }
-                });
-            });
-        });
-    });
+    } catch (error) {
+        // Rollback on error
+        if (connection) {
+            await connection.rollback();
+        }
+        throw error;
+    } finally {
+        // Release connection
+        if (connection) {
+            connection.release();
+        }
+    }
 }
 
 // ====================================================================
@@ -1471,16 +1447,28 @@ async function generateNextPTHN(db) {
 app.post('/api/patients/check-id', authenticateToken, async (req, res) => {
     const { pid, passport } = req.body;
 
-    // Validation: At least one ID must be provided
-    if (!pid && !passport) {
-        return res.status(400).json({
-            success: false,
-            message: 'Please provide at least Thai ID or Passport number.'
-        });
-    }
-
     const pidValue = pid ? pid.trim() : null;
     const passportValue = passport ? passport.trim() : null;
+
+    // If no ID provided, just generate PTHN without duplicate check
+    if (!pidValue && !passportValue) {
+        try {
+            const db = req.app.locals.db;
+            const nextPTHN = await generateNextPTHN(db);
+            return res.json({
+                success: true,
+                isDuplicate: false,
+                nextPTHN: nextPTHN,
+                message: 'PTHN generated (no duplicate check performed).'
+            });
+        } catch (error) {
+            console.error('PTHN generation error:', error);
+            return res.status(500).json({
+                success: false,
+                message: error.message || 'Failed to generate PTHN.'
+            });
+        }
+    }
 
     try {
         // Validate Thai ID format if provided

@@ -112,12 +112,6 @@ elements.btnCheckID.addEventListener('click', async function() {
     const pidValue = elements.pidInput.value.trim();
     const passportValue = elements.passportInput.value.trim();
 
-    // Validation: Must have at least one ID
-    if (!pidValue && !passportValue) {
-        showErrorAlert('Please provide at least Thai ID or Passport number.');
-        return;
-    }
-
     // Validate Thai ID if provided
     if (pidValue) {
         if (!validateThaiNationalID(pidValue)) {
