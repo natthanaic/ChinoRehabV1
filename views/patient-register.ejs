@@ -8,6 +8,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" rel="stylesheet">
     <style>
+        /* --- REVERTED --- Removed body background-color */
+        body {
+            /* background-color: #f9fbfd; */
+        }
+
         .sidebar {
             min-height: 100vh;
             background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
@@ -29,6 +34,7 @@
             color: #fff;
         }
 
+        /* --- REVERTED --- Restored original .form-section styles */
         .form-section {
             background: #f8f9fa;
             padding: 1rem;
@@ -37,6 +43,9 @@
             border: 1px solid #e0e0e0;
         }
 
+        /* --- REVERTED --- Removed .form-section:hover */
+
+        /* --- REVERTED --- Restored original .form-section h5 styles */
         .form-section h5 {
             color: #667eea;
             margin-bottom: 0.75rem;
@@ -45,6 +54,8 @@
             font-weight: 600;
             font-size: 1.1rem;
         }
+
+        /* --- REVERTED --- Removed .form-section h5 i styles */
 
         .required::after {
             content: " *";
@@ -68,6 +79,10 @@
             font-size: 0.875rem;
             color: #6c757d;
         }
+
+        /* --- REVERTED --- Removed main .h2 styles */
+
+        /* --- REVERTED --- Removed .btn-primary styles */
     </style>
 </head>
 <body>
@@ -348,7 +363,7 @@
                                         <textarea class="form-control form-control-sm" id="medical_history" rows="2" placeholder="Past conditions"></textarea>
                                     </div>
                                 </div>
-                                <div class="row">
+                                <div classs="row">
                                     <div class="col-md-6 mb-2">
                                         <label for="allergies" class="form-label">Allergies</label>
                                         <textarea class="form-control form-control-sm" id="allergies" rows="2" placeholder="Known allergies"></textarea>
@@ -454,29 +469,37 @@
                                         <textarea class="form-control form-control-sm" id="doctor_note" rows="2" placeholder="Notes"></textarea>
                                     </div>
                                 </div>
+
+                                <!-- === MOVED CLINIC ASSIGNMENT === -->
+                                <% if (user.role === 'ADMIN' || user.role === 'PT' || user.role === 'PT_ADMIN') { %>
+                                <div class="row mt-3 pt-3 border-top"> <!-- Added divider -->
+                                    <div class="col-lg-6">
+                                        <h5><i class="bi bi-building me-2"></i>Clinic Assignment</h5>
+                                        <div class="row">
+                                            <div class="col-md-12 mb-2">
+                                                <label for="clinic_id" class="form-label required">Clinic</label>
+                                                <select class="form-select form-select-sm" id="clinic_id" required>
+                                                    <option value="">Select Clinic</option>
+                                                </select>
+                                                <div class="invalid-feedback">Please select a clinic</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <% } %>
+                                <!-- === END MOVED BLOCK === -->
+
                             </div>
                         </div>
                     </div>
 
-                    <!-- ROW 5: Clinic Assignment -->
-                    <% if (user.role === 'ADMIN' || user.role === 'PT' || user.role === 'PT_ADMIN') { %>
-                    <div class="row">
+                    <!-- ROW 5: Clinic Assignment (This block is now removed) -->
+                    <% /* <div class="row">
                         <div class="col-lg-6 mb-2">
-                            <div class="form-section">
-                                <h5><i class="bi bi-building me-2"></i>Clinic Assignment</h5>
-                                <div class="row">
-                                    <div class="col-md-12 mb-2">
-                                        <label for="clinic_id" class="form-label required">Clinic</label>
-                                        <select class="form-select form-select-sm" id="clinic_id" required>
-                                            <option value="">Select Clinic</option>
-                                        </select>
-                                        <div class="invalid-feedback">Please select a clinic</div>
-                                    </div>
-                                </div>
-                            </div>
+...
                         </div>
                     </div>
-                    <% } %>
+                    */ %>
 
                     <!-- ==================== ACTION BUTTONS ==================== -->
                     <div class="text-center mt-4 mb-5">
@@ -777,7 +800,7 @@
 
                 // Rehabilitation
                 rehab_goal: goals.join(', '),
-                rehab_goal_other: document.getElementById('rehab_goal_other').value,
+                rehab_goal_other: document.getElementById('rehab_goal_other').route,
                 body_area: document.getElementById('body_area').value,
                 frequency: document.getElementById('frequency').value,
                 expected_duration: document.getElementById('expected_duration').value,
