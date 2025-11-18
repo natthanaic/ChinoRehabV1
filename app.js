@@ -1584,9 +1584,18 @@ app.post('/api/patients/check-id', authenticateToken, async (req, res) => {
 
     } catch (error) {
         console.error('Check ID error:', error);
+
+        // Check if it's a missing table error
+        if (error.message && (error.message.includes('pthn_sequence') || error.code === 'ER_NO_SUCH_TABLE')) {
+            return res.status(500).json({
+                success: false,
+                message: 'Database table missing. Run this SQL: CREATE TABLE pthn_sequence (id INT AUTO_INCREMENT PRIMARY KEY, year INT(4) NOT NULL, last_sequence INT(4) DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE KEY (year)); INSERT INTO pthn_sequence (year, last_sequence) VALUES (25, 0);'
+            });
+        }
+
         res.status(500).json({
             success: false,
-            message: 'An error occurred while checking the ID.'
+            message: error.message || 'An error occurred while checking the ID.'
         });
     }
 });

@@ -162,24 +162,39 @@ async function checkIDDuplication(pidValue, passportValue) {
     // Get token from cookie (same as patient registration form)
     const token = getCookie('authToken');
 
-    const response = await fetch('/api/patients/check-id', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-            pid: pidValue || null,
-            passport: passportValue || null
-        })
-    });
+    // Create abort controller for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
-    if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'API request failed');
+    try {
+        const response = await fetch('/api/patients/check-id', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                pid: pidValue || null,
+                passport: passportValue || null
+            }),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.message || 'API request failed');
+        }
+
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error('Request timeout. The database may not be set up correctly. Please check server logs.');
+        }
+        throw error;
     }
-
-    return await response.json();
 }
 
 // Helper function to get cookie value
@@ -273,15 +288,10 @@ function handleViewPatient(patientId) {
 }
 
 function handleCreatePN(patientId, patientHN) {
-    // TODO: Implement PN creation page
-    alert(`To create a new PN (Patient Number) case for patient ${patientHN}:\n\n` +
-          `1. Go to the patient detail page\n` +
-          `2. Click "View Patient Details" button\n` +
-          `3. Create a new treatment case from there\n\n` +
-          `Patient ID: ${patientId}`);
-
-    // Optionally redirect to patient detail page instead
-    // window.location.href = `/patients/${patientId}`;
+    // Redirect to patient detail page where PN can be created
+    if (confirm(`This will take you to patient ${patientHN}'s detail page where you can create a new PN (Patient Number) case.\n\nContinue?`)) {
+        window.location.href = `/patients/${patientId}`;
+    }
 }
 
 function updateWorkflowStep(step) {
