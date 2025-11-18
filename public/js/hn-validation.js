@@ -200,6 +200,24 @@ function getCookie(name) {
 }
 
 // UI Update Functions
+function revealFormSections() {
+    // Show all hidden form sections with smooth animation
+    const sectionsToReveal = [
+        'nameSection',
+        'demographicsSection',
+        'emergencyClinicalSection',
+        'rehabSection',
+        'submitButtons'
+    ];
+
+    sectionsToReveal.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.classList.remove('hidden-until-verified');
+        }
+    });
+}
+
 function showAvailableAlert(nextPTHN) {
     HNValidationState.isVerified = true;
     HNValidationState.isDuplicate = false;
@@ -218,6 +236,9 @@ function showAvailableAlert(nextPTHN) {
     // Set hidden fields
     elements.pid.value = HNValidationState.pidValue || '';
     elements.passport.value = HNValidationState.passportValue || '';
+
+    // Reveal the rest of the form sections after successful verification
+    revealFormSections();
 
     elements.verificationSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     updateWorkflowStep(2);
@@ -274,7 +295,28 @@ function resetVerificationState() {
     elements.verificationAlert.innerHTML = '';
     elements.hn.value = '';
 
+    // Hide form sections again when resetting
+    hideFormSections();
+
     updateWorkflowStep(1);
+}
+
+function hideFormSections() {
+    // Hide all form sections when verification is reset
+    const sectionsToHide = [
+        'nameSection',
+        'demographicsSection',
+        'emergencyClinicalSection',
+        'rehabSection',
+        'submitButtons'
+    ];
+
+    sectionsToHide.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.classList.add('hidden-until-verified');
+        }
+    });
 }
 
 function handleViewPatient(patientId) {

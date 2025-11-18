@@ -83,6 +83,11 @@
         /* --- REVERTED --- Removed main .h2 styles */
 
         /* --- REVERTED --- Removed .btn-primary styles */
+
+        /* Progressive form disclosure - hide sections until HN verified */
+        .hidden-until-verified {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -188,7 +193,7 @@
                             </div>
                         </div>
 
-                        <div class="col-lg-6 mb-2">
+                        <div class="col-lg-6 mb-2 hidden-until-verified" id="nameSection">
                             <!-- ==================== NAME INFORMATION ==================== -->
                             <div class="form-section h-100">
                                 <h5><i class="bi bi-person-vcard me-2"></i>Name Information</h5>
@@ -227,7 +232,7 @@
                     </div>
 
                     <!-- ROW 2: Demographics & Contact (Full Width) -->
-                    <div class="row">
+                    <div class="row hidden-until-verified" id="demographicsSection">
                         <div class="col-12 mb-2">
                             <div class="form-section">
                                 <h5><i class="bi bi-calendar3 me-2"></i>Demographics & Contact</h5>
@@ -342,7 +347,7 @@
                     </div>
 
                     <!-- ROW 3: Emergency Contact + Clinical Information -->
-                    <div class="row">
+                    <div class="row hidden-until-verified" id="emergencyClinicalSection">
                         <div class="col-lg-6 mb-2">
                             <!-- ==================== EMERGENCY CONTACT ==================== -->
                             <div class="form-section h-100">
@@ -414,7 +419,7 @@
                     </div>
 
                     <!-- ROW 4: Rehabilitation Plan (Full Width) -->
-                    <div class="row">
+                    <div class="row hidden-until-verified" id="rehabSection">
                         <div class="col-12 mb-2">
                             <div class="form-section">
                                 <h5><i class="bi bi-clipboard2-pulse me-2"></i>Rehabilitation Plan</h5>
@@ -538,7 +543,7 @@
                     */ %>
 
                     <!-- ==================== ACTION BUTTONS ==================== -->
-                    <div class="text-center mt-4 mb-5">
+                    <div class="text-center mt-4 mb-5 hidden-until-verified" id="submitButtons">
                         <button type="submit" class="btn btn-primary btn-lg px-5">
                             <i class="bi bi-save me-2"></i>Register Patient
                         </button>
