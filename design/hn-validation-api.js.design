@@ -1,0 +1,628 @@
+/**
+ * ====================================================================
+ * HN CREATION & VALIDATION - BACKEND API
+ * File: app.js (Add these endpoints and functions)
+ *
+ * PURPOSE:
+ * - Generate PTHN with format: PTYYXXXX (e.g., PT250001, PT260001)
+ * - Check Thai ID / Passport duplication
+ * - Auto-increment sequence number per year
+ * - Reset sequence to 0001 every new year
+ * ====================================================================
+ */
+
+// ====================================================================
+// DATABASE SCHEMA CHANGES REQUIRED
+// ====================================================================
+
+/*
+-- Add new table to track PTHN sequence per year
+CREATE TABLE IF NOT EXISTS `pthn_sequence` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `year` int(4) NOT NULL COMMENT 'Year in YY format (e.g., 25 for 2025)',
+  `last_sequence` int(4) NOT NULL DEFAULT 0 COMMENT 'Last used sequence number (0001-9999)',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_year` (`year`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add unique constraint on HN
+ALTER TABLE `patients`
+ADD UNIQUE KEY `unique_hn` (`hn`);
+
+-- Add index on Thai ID and Passport for faster lookup
+ALTER TABLE `patients`
+DROP INDEX IF EXISTS `idx_patient_pid`,
+ADD UNIQUE KEY `unique_pid` (`pid`);
+
+-- Note: Passport might have NULL values, so we can't make it UNIQUE
+-- Instead, we'll handle uniqueness check in application logic
+ALTER TABLE `patients`
+ADD INDEX `idx_patient_passport` (`passport_no`);
+*/
+
+// ====================================================================
+// UTILITY FUNCTIONS
+// ====================================================================
+
+/**
+ * Generate next PTHN with format PTYYXXXX
+ * - PT: Prefix (fixed)
+ * - YY: Current year (2 digits, e.g., 25 for 2025, 26 for 2026)
+ * - XXXX: Sequential number (0001-9999)
+ * - Resets to 0001 every new year
+ *
+ * @param {Object} db - MySQL database connection
+ * @returns {Promise<string>} - Next PTHN (e.g., "PT250001")
+ */
+async function generateNextPTHN(db) {
+    // Get current year (2 digits)
+    const currentYear = parseInt(moment().format('YY')); // e.g., 25 for 2025
+
+    return new Promise((resolve, reject) => {
+        // Start transaction
+        db.beginTransaction((err) => {
+            if (err) {
+                return reject(err);
+            }
+
+            // Get or create sequence for current year
+            const getSequenceQuery = `
+                SELECT last_sequence
+                FROM pthn_sequence
+                WHERE year = ?
+                FOR UPDATE
+            `;
+
+            db.query(getSequenceQuery, [currentYear], (err, results) => {
+                if (err) {
+                    return db.rollback(() => reject(err));
+                }
+
+                let nextSequence;
+
+                if (results.length === 0) {
+                    // First PTHN of the year
+                    nextSequence = 1;
+
+                    const insertQuery = `
+                        INSERT INTO pthn_sequence (year, last_sequence)
+                        VALUES (?, ?)
+                    `;
+
+                    db.query(insertQuery, [currentYear, nextSequence], (err) => {
+                        if (err) {
+                            return db.rollback(() => reject(err));
+                        }
+
+                        commitAndResolve(nextSequence);
+                    });
+
+                } else {
+                    // Increment sequence
+                    nextSequence = results[0].last_sequence + 1;
+
+                    // Check if sequence exceeds limit (9999)
+                    if (nextSequence > 9999) {
+                        return db.rollback(() => {
+                            reject(new Error('PTHN sequence limit reached for this year (max 9999)'));
+                        });
+                    }
+
+                    const updateQuery = `
+                        UPDATE pthn_sequence
+                        SET last_sequence = ?
+                        WHERE year = ?
+                    `;
+
+                    db.query(updateQuery, [nextSequence, currentYear], (err) => {
+                        if (err) {
+                            return db.rollback(() => reject(err));
+                        }
+
+                        commitAndResolve(nextSequence);
+                    });
+                }
+
+                function commitAndResolve(sequence) {
+                    db.commit((err) => {
+                        if (err) {
+                            return db.rollback(() => reject(err));
+                        }
+
+                        // Format: PTYYXXXX
+                        const pthn = `PT${currentYear.toString().padStart(2, '0')}${sequence.toString().padStart(4, '0')}`;
+                        resolve(pthn);
+                    });
+                }
+            });
+        });
+    });
+}
+
+/**
+ * Validate Thai National ID using checksum algorithm
+ * @param {string} pid - 13-digit Thai ID
+ * @returns {boolean} - True if valid, false otherwise
+ */
+function validateThaiNationalID(pid) {
+    if (!pid || typeof pid !== 'string') {
+        return false;
+    }
+
+    // Remove any spaces or dashes
+    pid = pid.replace(/[\s-]/g, '');
+
+    // Must be exactly 13 digits
+    if (!/^\d{13}$/.test(pid)) {
+        return false;
+    }
+
+    // Calculate checksum
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+        sum += parseInt(pid[i]) * (13 - i);
+    }
+
+    const checksum = (11 - (sum % 11)) % 10;
+    const lastDigit = parseInt(pid[12]);
+
+    return checksum === lastDigit;
+}
+
+/**
+ * Validate Passport ID format
+ * @param {string} passport - Passport number
+ * @returns {boolean} - True if valid, false otherwise
+ */
+function validatePassportID(passport) {
+    if (!passport || typeof passport !== 'string') {
+        return false;
+    }
+
+    // Remove any spaces
+    passport = passport.replace(/\s/g, '');
+
+    // Basic validation: 6-20 alphanumeric characters
+    if (!/^[A-Z0-9]{6,20}$/i.test(passport)) {
+        return false;
+    }
+
+    return true;
+}
+
+// ====================================================================
+// API ENDPOINTS
+// ====================================================================
+
+/**
+ * POST /api/patients/check-id
+ * Check if Thai ID or Passport already exists in database
+ * If not exists, return the next PTHN that will be created
+ * If exists, return existing patient information
+ *
+ * Request Body:
+ * {
+ *   "idType": "thai_id" | "passport",
+ *   "idValue": "1234567890123" | "AB1234567"
+ * }
+ *
+ * Response (ID Available):
+ * {
+ *   "isDuplicate": false,
+ *   "nextPTHN": "PT250001",
+ *   "message": "ID is available. You can create a new patient."
+ * }
+ *
+ * Response (ID Exists):
+ * {
+ *   "isDuplicate": true,
+ *   "patient": {
+ *     "id": 123,
+ *     "hn": "PT250001",
+ *     "pt_number": "PT20251118...",
+ *     "title": "Mr.",
+ *     "first_name": "John",
+ *     "last_name": "Doe",
+ *     "dob": "1990-01-01",
+ *     "clinic_name": "Main Clinic",
+ *     "created_at": "2025-11-18T10:30:00.000Z"
+ *   },
+ *   "message": "This ID is already registered."
+ * }
+ */
+app.post('/api/patients/check-id', authenticateToken, [
+    body('idType').isIn(['thai_id', 'passport']).withMessage('Invalid ID type'),
+    body('idValue').notEmpty().withMessage('ID value is required')
+], async (req, res) => {
+    // Validate request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            errors: errors.array()
+        });
+    }
+
+    const { idType, idValue } = req.body;
+
+    try {
+        // Validate ID format based on type
+        if (idType === 'thai_id') {
+            if (!validateThaiNationalID(idValue)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid Thai National ID format or checksum.'
+                });
+            }
+        } else if (idType === 'passport') {
+            if (!validatePassportID(idValue)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid passport format. Use 6-20 alphanumeric characters.'
+                });
+            }
+        }
+
+        // Check if ID exists in database
+        let checkQuery;
+        let queryParams;
+
+        if (idType === 'thai_id') {
+            checkQuery = `
+                SELECT
+                    p.id,
+                    p.hn,
+                    p.pt_number,
+                    p.title,
+                    p.first_name,
+                    p.last_name,
+                    p.dob,
+                    p.created_at,
+                    c.name as clinic_name
+                FROM patients p
+                LEFT JOIN clinics c ON p.clinic_id = c.id
+                WHERE p.pid = ?
+                LIMIT 1
+            `;
+            queryParams = [idValue];
+
+        } else if (idType === 'passport') {
+            checkQuery = `
+                SELECT
+                    p.id,
+                    p.hn,
+                    p.pt_number,
+                    p.title,
+                    p.first_name,
+                    p.last_name,
+                    p.dob,
+                    p.created_at,
+                    c.name as clinic_name
+                FROM patients p
+                LEFT JOIN clinics c ON p.clinic_id = c.id
+                WHERE p.passport_no = ?
+                LIMIT 1
+            `;
+            queryParams = [idValue];
+        }
+
+        db.query(checkQuery, queryParams, async (err, results) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Database error occurred.'
+                });
+            }
+
+            // Check if ID already exists
+            if (results.length > 0) {
+                // ID exists - return patient information
+                const patient = results[0];
+
+                return res.json({
+                    success: true,
+                    isDuplicate: true,
+                    patient: {
+                        id: patient.id,
+                        hn: patient.hn,
+                        pt_number: patient.pt_number,
+                        title: patient.title,
+                        first_name: patient.first_name,
+                        last_name: patient.last_name,
+                        dob: patient.dob,
+                        clinic_name: patient.clinic_name,
+                        created_at: patient.created_at
+                    },
+                    message: 'This ID is already registered.'
+                });
+
+            } else {
+                // ID does not exist - generate next PTHN
+                try {
+                    const nextPTHN = await generateNextPTHN(db);
+
+                    return res.json({
+                        success: true,
+                        isDuplicate: false,
+                        nextPTHN: nextPTHN,
+                        message: 'ID is available. You can create a new patient.'
+                    });
+
+                } catch (error) {
+                    console.error('PTHN generation error:', error);
+                    return res.status(500).json({
+                        success: false,
+                        message: error.message || 'Failed to generate PTHN.'
+                    });
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error('Check ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while checking the ID.'
+        });
+    }
+});
+
+// ====================================================================
+// MODIFY EXISTING PATIENT CREATION ENDPOINT
+// ====================================================================
+
+/**
+ * POST /api/patients
+ * Modified to use PTHN from frontend (already verified)
+ * Add additional server-side validation
+ */
+app.post('/api/patients', authenticateToken, [
+    body('hn').notEmpty().matches(/^PT\d{6}$/).withMessage('Invalid HN format. Must be PTYYXXXX.'),
+    body('first_name').notEmpty(),
+    body('last_name').notEmpty(),
+    body('dob').isDate(),
+    body('diagnosis').notEmpty(),
+    body('idType').isIn(['thai_id', 'passport']).withMessage('Invalid ID type'),
+    body('idValue').notEmpty().withMessage('ID value is required')
+], async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({
+            success: false,
+            errors: errors.array()
+        });
+    }
+
+    const {
+        hn,
+        idType,
+        idValue,
+        first_name,
+        last_name,
+        dob,
+        diagnosis,
+        clinic_id,
+        // ... other fields
+    } = req.body;
+
+    try {
+        // SERVER-SIDE VERIFICATION: Re-check if ID is still available
+        // (Prevent race conditions where two users check same ID simultaneously)
+
+        let checkQuery;
+        let queryParams;
+
+        if (idType === 'thai_id') {
+            // Validate Thai ID checksum on server-side
+            if (!validateThaiNationalID(idValue)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid Thai National ID checksum.'
+                });
+            }
+
+            checkQuery = 'SELECT id FROM patients WHERE pid = ? LIMIT 1';
+            queryParams = [idValue];
+
+        } else if (idType === 'passport') {
+            // Validate passport format on server-side
+            if (!validatePassportID(idValue)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid passport format.'
+                });
+            }
+
+            checkQuery = 'SELECT id FROM patients WHERE passport_no = ? LIMIT 1';
+            queryParams = [idValue];
+        }
+
+        db.query(checkQuery, queryParams, (err, duplicateCheck) => {
+            if (err) {
+                console.error('Database error:', err);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Database error occurred.'
+                });
+            }
+
+            // If duplicate found, reject creation
+            if (duplicateCheck.length > 0) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'This ID is already registered. Please verify again.'
+                });
+            }
+
+            // Verify HN format matches current year
+            const currentYear = moment().format('YY');
+            const hnYear = hn.substring(2, 4);
+
+            if (hnYear !== currentYear) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid HN year. Expected PT${currentYear}XXXX, got ${hn}.`
+                });
+            }
+
+            // Generate PT Number (keep existing logic)
+            const pt_number = generatePTNumber();
+
+            // Prepare patient data
+            const patientData = {
+                hn: hn,
+                pt_number: pt_number,
+                pid: idType === 'thai_id' ? idValue : null,
+                passport_no: idType === 'passport' ? idValue : null,
+                first_name: first_name,
+                last_name: last_name,
+                dob: dob,
+                diagnosis: diagnosis,
+                clinic_id: clinic_id,
+                created_by: req.user.userId,
+                // ... map other fields
+            };
+
+            // Insert patient
+            const insertQuery = 'INSERT INTO patients SET ?';
+
+            db.query(insertQuery, patientData, (err, result) => {
+                if (err) {
+                    console.error('Insert error:', err);
+
+                    // Handle duplicate HN error (race condition)
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return res.status(409).json({
+                            success: false,
+                            message: 'HN already exists. Please verify ID again to get a new HN.'
+                        });
+                    }
+
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Failed to create patient.'
+                    });
+                }
+
+                res.status(201).json({
+                    success: true,
+                    message: 'Patient created successfully.',
+                    patient: {
+                        id: result.insertId,
+                        hn: hn,
+                        pt_number: pt_number
+                    }
+                });
+            });
+        });
+
+    } catch (error) {
+        console.error('Create patient error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while creating the patient.'
+        });
+    }
+});
+
+// ====================================================================
+// ADMIN ENDPOINT: Get PTHN statistics
+// ====================================================================
+
+/**
+ * GET /api/admin/pthn-stats
+ * Get PTHN generation statistics (for admin monitoring)
+ * Requires ADMIN role
+ */
+app.get('/api/admin/pthn-stats', authenticateToken, authorizeRole(['ADMIN']), (req, res) => {
+    const statsQuery = `
+        SELECT
+            year,
+            last_sequence,
+            CONCAT('PT', LPAD(year, 2, '0'), LPAD(last_sequence, 4, '0')) as last_pthn,
+            CONCAT('PT', LPAD(year, 2, '0'), LPAD(last_sequence + 1, 4, '0')) as next_pthn,
+            (9999 - last_sequence) as remaining,
+            created_at,
+            updated_at
+        FROM pthn_sequence
+        ORDER BY year DESC
+    `;
+
+    db.query(statsQuery, (err, results) => {
+        if (err) {
+            console.error('Stats query error:', err);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to fetch PTHN statistics.'
+            });
+        }
+
+        res.json({
+            success: true,
+            stats: results
+        });
+    });
+});
+
+// ====================================================================
+// NOTES FOR IMPLEMENTATION
+// ====================================================================
+
+/*
+IMPLEMENTATION CHECKLIST:
+
+1. Database Changes:
+   - Create `pthn_sequence` table
+   - Add UNIQUE constraint on `patients.hn`
+   - Add UNIQUE constraint on `patients.pid` (Thai ID)
+   - Add INDEX on `patients.passport_no`
+
+2. Backend (app.js):
+   - Add `generateNextPTHN()` function
+   - Add `validateThaiNationalID()` function
+   - Add `validatePassportID()` function
+   - Add POST /api/patients/check-id endpoint
+   - Modify POST /api/patients endpoint with additional validation
+   - Add GET /api/admin/pthn-stats endpoint (optional)
+
+3. Frontend (patient-register.ejs):
+   - Update Patient Identifiers section with new UI
+   - Add ID type selector
+   - Add "Check ID" button
+   - Make HN field read-only
+   - Add verification alert section
+   - Add templates for alerts
+
+4. Frontend JavaScript (hn-validation.js or embedded):
+   - Add event handlers for ID type and value
+   - Add ID format validation
+   - Add checkIDDuplication() API call
+   - Add UI update functions (alerts, PTHN preview)
+   - Add form submission validation
+
+5. Testing:
+   - Test PTHN generation and auto-increment
+   - Test year rollover (sequence reset)
+   - Test Thai ID validation and duplication check
+   - Test Passport validation and duplication check
+   - Test form submission with verified ID
+   - Test error handling (duplicate submission, race conditions)
+   - Test PN creation redirect for existing patients
+
+6. User Flow:
+   Step 1: User selects ID type (Thai ID or Passport)
+   Step 2: User enters ID number
+   Step 3: User clicks "Check ID" button
+   Step 4a: If ID available -> Show PTHN preview -> Fill form -> Submit
+   Step 4b: If ID exists -> Show patient info -> Create PN case or cancel
+
+7. Edge Cases:
+   - Handle sequence limit (9999 patients per year)
+   - Handle race conditions (two users check same ID)
+   - Handle year transition (reset sequence)
+   - Handle invalid ID formats
+   - Handle network errors gracefully
+*/

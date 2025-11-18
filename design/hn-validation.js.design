@@ -1,0 +1,537 @@
+/**
+ * ====================================================================
+ * HN CREATION & VALIDATION - CLIENT-SIDE JAVASCRIPT
+ * File: public/js/hn-validation.js (NEW FILE) OR add to patient-register.ejs <script>
+ *
+ * PURPOSE:
+ * - Handle ID type selection (Thai ID vs Passport)
+ * - Validate ID format before checking database
+ * - Call API to check ID duplication
+ * - Display PTHN preview or duplicate alert
+ * - Manage form state and submission flow
+ * ====================================================================
+ */
+
+// ====================================================================
+// GLOBAL STATE MANAGEMENT
+// ====================================================================
+
+const HNValidationState = {
+    idType: null,              // 'thai_id' or 'passport'
+    idValue: null,             // The ID number entered
+    isVerified: false,         // Has ID been successfully verified?
+    isDuplicate: false,        // Is this ID already in database?
+    previewPTHN: null,         // The PTHN that will be created
+    existingPatient: null      // Existing patient data (if duplicate)
+};
+
+// ====================================================================
+// DOM ELEMENTS CACHE
+// ====================================================================
+
+const elements = {
+    // Input fields
+    idType: document.getElementById('idType'),
+    idValue: document.getElementById('idValue'),
+    idValueLabel: document.getElementById('idValueLabel'),
+    idHelperText: document.getElementById('idHelperText'),
+    idErrorText: document.getElementById('idErrorText'),
+
+    // Buttons
+    btnCheckID: document.getElementById('btnCheckID'),
+    btnViewPatient: null,  // Will be set dynamically
+    btnCreatePN: null,     // Will be set dynamically
+
+    // HN field (now read-only)
+    hn: document.getElementById('hn'),
+
+    // Hidden fields for backward compatibility
+    pid: document.getElementById('pid'),
+    passport: document.getElementById('passport'),
+
+    // Verification section
+    verificationSection: document.getElementById('verificationSection'),
+    verificationAlert: document.getElementById('verificationAlert'),
+
+    // Templates
+    templateIdAvailable: document.getElementById('templateIdAvailable'),
+    templateIdExists: document.getElementById('templateIdExists'),
+    templateVerificationError: document.getElementById('templateVerificationError'),
+
+    // Form
+    patientForm: document.getElementById('patientForm')
+};
+
+// ====================================================================
+// VALIDATION FUNCTIONS
+// ====================================================================
+
+/**
+ * Validate Thai National ID using checksum algorithm
+ * @param {string} id - 13-digit Thai ID
+ * @returns {boolean} - True if valid, false otherwise
+ */
+function validateThaiNationalID(id) {
+    // Remove any spaces or dashes
+    id = id.replace(/[\s-]/g, '');
+
+    // Must be exactly 13 digits
+    if (!/^\d{13}$/.test(id)) {
+        return false;
+    }
+
+    // Calculate checksum
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+        sum += parseInt(id[i]) * (13 - i);
+    }
+
+    const checksum = (11 - (sum % 11)) % 10;
+    const lastDigit = parseInt(id[12]);
+
+    return checksum === lastDigit;
+}
+
+/**
+ * Validate Passport ID format
+ * @param {string} passport - Passport number
+ * @returns {boolean} - True if valid, false otherwise
+ */
+function validatePassportID(passport) {
+    // Remove any spaces
+    passport = passport.replace(/\s/g, '');
+
+    // Basic validation: 6-20 alphanumeric characters
+    // Most passports are 6-9 characters, but some countries use longer formats
+    if (!/^[A-Z0-9]{6,20}$/i.test(passport)) {
+        return false;
+    }
+
+    return true;
+}
+
+/**
+ * Format Thai ID with dashes (1-2345-67890-12-3)
+ * @param {string} id - Thai ID without formatting
+ * @returns {string} - Formatted Thai ID
+ */
+function formatThaiID(id) {
+    id = id.replace(/[\s-]/g, '');
+    if (id.length === 13) {
+        return `${id.substring(0, 1)}-${id.substring(1, 5)}-${id.substring(5, 10)}-${id.substring(10, 12)}-${id.substring(12, 13)}`;
+    }
+    return id;
+}
+
+// ====================================================================
+// EVENT HANDLERS
+// ====================================================================
+
+/**
+ * Handle ID Type selection change
+ */
+elements.idType.addEventListener('change', function() {
+    const selectedType = this.value;
+    HNValidationState.idType = selectedType;
+
+    // Clear previous input and state
+    elements.idValue.value = '';
+    elements.hn.value = '';
+    resetVerificationState();
+
+    // Update UI based on selected type
+    if (selectedType === 'thai_id') {
+        elements.idValueLabel.textContent = 'Thai National ID';
+        elements.idValue.placeholder = '1234567890123';
+        elements.idValue.maxLength = 13;
+        elements.idHelperText.textContent = '13-digit Thai National ID';
+        elements.btnCheckID.disabled = false;
+
+    } else if (selectedType === 'passport') {
+        elements.idValueLabel.textContent = 'Passport Number';
+        elements.idValue.placeholder = 'AB1234567';
+        elements.idValue.maxLength = 20;
+        elements.idHelperText.textContent = '6-20 alphanumeric characters';
+        elements.btnCheckID.disabled = false;
+
+    } else {
+        elements.idValueLabel.textContent = 'ID Number';
+        elements.idValue.placeholder = 'Enter ID number';
+        elements.idHelperText.textContent = 'Select ID type first';
+        elements.btnCheckID.disabled = true;
+    }
+
+    // Focus on input field
+    if (selectedType) {
+        elements.idValue.focus();
+    }
+});
+
+/**
+ * Handle ID Value input changes
+ */
+elements.idValue.addEventListener('input', function() {
+    const value = this.value.trim();
+    HNValidationState.idValue = value;
+
+    // Clear previous verification
+    resetVerificationState();
+
+    // Enable/disable Check ID button based on input length
+    if (HNValidationState.idType === 'thai_id') {
+        elements.btnCheckID.disabled = value.length !== 13;
+    } else if (HNValidationState.idType === 'passport') {
+        elements.btnCheckID.disabled = value.length < 6;
+    }
+});
+
+/**
+ * Handle ID Value blur (format validation)
+ */
+elements.idValue.addEventListener('blur', function() {
+    const value = this.value.trim();
+
+    if (!value) return;
+
+    // Validate based on ID type
+    let isValid = false;
+    let errorMessage = '';
+
+    if (HNValidationState.idType === 'thai_id') {
+        isValid = validateThaiNationalID(value);
+        errorMessage = 'Invalid Thai National ID. Please check the checksum.';
+
+        // Auto-format if valid
+        if (isValid) {
+            // Store unformatted version
+            HNValidationState.idValue = value;
+        }
+
+    } else if (HNValidationState.idType === 'passport') {
+        isValid = validatePassportID(value);
+        errorMessage = 'Invalid passport format. Use 6-20 alphanumeric characters.';
+    }
+
+    // Show validation feedback
+    if (value && !isValid) {
+        elements.idValue.classList.add('is-invalid');
+        elements.idErrorText.textContent = errorMessage;
+        elements.btnCheckID.disabled = true;
+    } else {
+        elements.idValue.classList.remove('is-invalid');
+        elements.idErrorText.textContent = '';
+        elements.btnCheckID.disabled = false;
+    }
+});
+
+/**
+ * Handle Check ID button click
+ */
+elements.btnCheckID.addEventListener('click', async function() {
+    const idType = HNValidationState.idType;
+    const idValue = HNValidationState.idValue;
+
+    // Validate before calling API
+    if (!idType || !idValue) {
+        alert('Please select ID type and enter ID number.');
+        return;
+    }
+
+    // Show loading state
+    const originalText = this.innerHTML;
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Checking...';
+
+    try {
+        // Call API to check ID duplication
+        const result = await checkIDDuplication(idType, idValue);
+
+        if (result.isDuplicate) {
+            // ID exists - show duplicate alert
+            showDuplicateAlert(result.patient);
+        } else {
+            // ID available - show PTHN preview
+            showAvailableAlert(result.nextPTHN);
+        }
+
+    } catch (error) {
+        console.error('ID verification error:', error);
+        showErrorAlert(error.message || 'Unable to verify ID. Please try again.');
+
+    } finally {
+        // Reset button state
+        this.disabled = false;
+        this.innerHTML = originalText;
+    }
+});
+
+/**
+ * Handle View Patient button click (when duplicate found)
+ */
+function handleViewPatient(patientId) {
+    // Open patient detail in new tab
+    window.open(`/patients/${patientId}`, '_blank');
+}
+
+/**
+ * Handle Create PN button click (when duplicate found)
+ */
+function handleCreatePN(patientId, patientHN) {
+    if (confirm(`Create a new PN (Patient Number) case for patient ${patientHN}?\n\nThis will redirect you to the PN creation page.`)) {
+        // Redirect to PN creation page with patient context
+        window.location.href = `/pn/create?patient_id=${patientId}&hn=${patientHN}`;
+    }
+}
+
+// ====================================================================
+// API FUNCTIONS
+// ====================================================================
+
+/**
+ * Call API to check if ID already exists and get next PTHN
+ * @param {string} idType - 'thai_id' or 'passport'
+ * @param {string} idValue - The ID number
+ * @returns {Promise<Object>} - Result with isDuplicate, patient, nextPTHN
+ */
+async function checkIDDuplication(idType, idValue) {
+    const response = await fetch('/api/patients/check-id', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+            idType: idType,
+            idValue: idValue
+        })
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'API request failed');
+    }
+
+    return await response.json();
+}
+
+// ====================================================================
+// UI UPDATE FUNCTIONS
+// ====================================================================
+
+/**
+ * Show "ID Available" alert with PTHN preview
+ * @param {string} nextPTHN - The PTHN that will be created (e.g., "PT250001")
+ */
+function showAvailableAlert(nextPTHN) {
+    // Update state
+    HNValidationState.isVerified = true;
+    HNValidationState.isDuplicate = false;
+    HNValidationState.previewPTHN = nextPTHN;
+
+    // Clone template
+    const template = elements.templateIdAvailable;
+    const content = template.content.cloneNode(true);
+
+    // Update PTHN preview
+    content.getElementById('previewPTHN').textContent = nextPTHN;
+
+    // Show verification section
+    elements.verificationAlert.innerHTML = '';
+    elements.verificationAlert.appendChild(content);
+    elements.verificationSection.style.display = 'block';
+
+    // Set HN field value
+    elements.hn.value = nextPTHN;
+
+    // Update hidden fields for backward compatibility
+    if (HNValidationState.idType === 'thai_id') {
+        elements.pid.value = HNValidationState.idValue;
+        elements.passport.value = '';
+    } else if (HNValidationState.idType === 'passport') {
+        elements.passport.value = HNValidationState.idValue;
+        elements.pid.value = '';
+    }
+
+    // Scroll to verification section
+    elements.verificationSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    // Update workflow steps (if exists)
+    updateWorkflowStep(2);
+}
+
+/**
+ * Show "ID Exists" alert with patient info and action buttons
+ * @param {Object} patient - Existing patient data
+ */
+function showDuplicateAlert(patient) {
+    // Update state
+    HNValidationState.isVerified = false;
+    HNValidationState.isDuplicate = true;
+    HNValidationState.existingPatient = patient;
+
+    // Clone template
+    const template = elements.templateIdExists;
+    const content = template.content.cloneNode(true);
+
+    // Populate patient data
+    content.getElementById('existingHN').textContent = patient.hn;
+    content.getElementById('existingPT').textContent = patient.pt_number;
+    content.getElementById('existingName').textContent = `${patient.title || ''} ${patient.first_name} ${patient.last_name}`.trim();
+    content.getElementById('existingDOB').textContent = formatDate(patient.dob);
+    content.getElementById('existingClinic').textContent = patient.clinic_name || 'N/A';
+    content.getElementById('existingDate').textContent = formatDate(patient.created_at);
+
+    // Attach event listeners to buttons
+    const btnViewPatient = content.getElementById('btnViewPatient');
+    const btnCreatePN = content.getElementById('btnCreatePN');
+
+    btnViewPatient.addEventListener('click', () => handleViewPatient(patient.id));
+    btnCreatePN.addEventListener('click', () => handleCreatePN(patient.id, patient.hn));
+
+    // Show verification section
+    elements.verificationAlert.innerHTML = '';
+    elements.verificationAlert.appendChild(content);
+    elements.verificationSection.style.display = 'block';
+
+    // Clear HN field (cannot create patient)
+    elements.hn.value = '';
+
+    // Scroll to verification section
+    elements.verificationSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+/**
+ * Show error alert
+ * @param {string} errorMessage - Error message to display
+ */
+function showErrorAlert(errorMessage) {
+    // Clone template
+    const template = elements.templateVerificationError;
+    const content = template.content.cloneNode(true);
+
+    // Set error message
+    content.getElementById('errorMessage').textContent = errorMessage;
+
+    // Show verification section
+    elements.verificationAlert.innerHTML = '';
+    elements.verificationAlert.appendChild(content);
+    elements.verificationSection.style.display = 'block';
+
+    // Reset state
+    resetVerificationState();
+}
+
+/**
+ * Reset verification state and UI
+ */
+function resetVerificationState() {
+    HNValidationState.isVerified = false;
+    HNValidationState.isDuplicate = false;
+    HNValidationState.previewPTHN = null;
+    HNValidationState.existingPatient = null;
+
+    elements.verificationSection.style.display = 'none';
+    elements.verificationAlert.innerHTML = '';
+    elements.hn.value = '';
+
+    updateWorkflowStep(1);
+}
+
+/**
+ * Update workflow step indicator
+ * @param {number} step - Current step (1, 2, or 3)
+ */
+function updateWorkflowStep(step) {
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+
+    if (!step1 || !step2 || !step3) return;
+
+    // Reset all steps
+    [step1, step2, step3].forEach(el => {
+        el.querySelector('.badge').classList.remove('bg-primary');
+        el.querySelector('.badge').classList.add('bg-secondary');
+        el.querySelector('small').classList.add('text-muted');
+    });
+
+    // Highlight current step and all previous steps
+    const steps = [step1, step2, step3];
+    for (let i = 0; i < step; i++) {
+        steps[i].querySelector('.badge').classList.remove('bg-secondary');
+        steps[i].querySelector('.badge').classList.add('bg-primary');
+        steps[i].querySelector('small').classList.remove('text-muted');
+    }
+}
+
+// ====================================================================
+// FORM SUBMISSION VALIDATION
+// ====================================================================
+
+/**
+ * Validate form before submission
+ */
+elements.patientForm.addEventListener('submit', function(e) {
+    // Check if ID has been verified
+    if (!HNValidationState.isVerified) {
+        e.preventDefault();
+
+        alert('Please verify the patient ID first by clicking "Check ID" button.');
+        elements.btnCheckID.focus();
+        return false;
+    }
+
+    // Check if HN has been generated
+    const hn = elements.hn.value;
+    if (!hn || !hn.startsWith('PT')) {
+        e.preventDefault();
+
+        alert('Hospital Number (HN) is not generated. Please verify the ID first.');
+        return false;
+    }
+
+    // Update workflow step
+    updateWorkflowStep(3);
+
+    // Continue with existing form validation...
+    // (Keep existing validation logic from patient-register.ejs)
+});
+
+// ====================================================================
+// UTILITY FUNCTIONS
+// ====================================================================
+
+/**
+ * Format date to DD/MM/YYYY
+ * @param {string} dateStr - Date string (ISO format or MySQL format)
+ * @returns {string} - Formatted date
+ */
+function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+}
+
+// ====================================================================
+// INITIALIZATION
+// ====================================================================
+
+/**
+ * Initialize HN validation on page load
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('HN Validation module initialized');
+
+    // Reset state
+    resetVerificationState();
+
+    // Set initial workflow step
+    updateWorkflowStep(1);
+});
