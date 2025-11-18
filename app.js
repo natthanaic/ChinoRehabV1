@@ -1377,7 +1377,37 @@ function validatePassportID(passport) {
     return /^[A-Z0-9]{6,20}$/i.test(passport);
 }
 
-// Generate next PTHN with format PTYYXXXX
+// Preview next PTHN WITHOUT incrementing (for showing preview to user)
+async function previewNextPTHN(db) {
+    const currentYear = parseInt(moment().format('YY'));
+
+    try {
+        // Just read the current sequence (no lock, no increment)
+        const [rows] = await db.query(
+            'SELECT last_sequence FROM pthn_sequence WHERE year = ?',
+            [currentYear]
+        );
+
+        let nextSequence;
+
+        if (rows.length === 0) {
+            // First PTHN of the year would be 1
+            nextSequence = 1;
+        } else {
+            // Next sequence would be current + 1
+            nextSequence = rows[0].last_sequence + 1;
+        }
+
+        // Format PTHN
+        const pthn = `PT${currentYear.toString().padStart(2, '0')}${nextSequence.toString().padStart(4, '0')}`;
+        return pthn;
+
+    } catch (error) {
+        throw error;
+    }
+}
+
+// Generate next PTHN with format PTYYXXXX (ACTUALLY INCREMENTS - only call when saving patient!)
 async function generateNextPTHN(db) {
     const currentYear = parseInt(moment().format('YY'));
     let connection;
@@ -1450,22 +1480,22 @@ app.post('/api/patients/check-id', authenticateToken, async (req, res) => {
     const pidValue = pid ? pid.trim() : null;
     const passportValue = passport ? passport.trim() : null;
 
-    // If no ID provided, just generate PTHN without duplicate check
+    // If no ID provided, just preview PTHN without duplicate check
     if (!pidValue && !passportValue) {
         try {
             const db = req.app.locals.db;
-            const nextPTHN = await generateNextPTHN(db);
+            const nextPTHN = await previewNextPTHN(db);
             return res.json({
                 success: true,
                 isDuplicate: false,
                 nextPTHN: nextPTHN,
-                message: 'PTHN generated (no duplicate check performed).'
+                message: 'PTHN preview (no duplicate check performed).'
             });
         } catch (error) {
-            console.error('PTHN generation error:', error);
+            console.error('PTHN preview error:', error);
             return res.status(500).json({
                 success: false,
-                message: error.message || 'Failed to generate PTHN.'
+                message: error.message || 'Failed to preview PTHN.'
             });
         }
     }
@@ -1560,8 +1590,8 @@ app.post('/api/patients/check-id', authenticateToken, async (req, res) => {
                 message: 'This ID is already registered.'
             });
         } else {
-            // ID available - generate next PTHN
-            const nextPTHN = await generateNextPTHN(db);
+            // ID available - preview next PTHN (sequence will increment only on actual patient save)
+            const nextPTHN = await previewNextPTHN(db);
             return res.json({
                 success: true,
                 isDuplicate: false,
@@ -1604,7 +1634,10 @@ app.post('/api/patients', authenticateToken, [
         
         const db = req.app.locals.db;
         const ptNumber = generatePTNumber();
-        
+
+        // Generate actual PTHN and increment sequence (this is the real increment, not preview)
+        const actualPTHN = await generateNextPTHN(db);
+
         // Role-based clinic assignment
         // ADMIN: Can create patients for any clinic (clinic_id from request)
         // CLINIC: Can only create patients for their own clinic
@@ -1639,14 +1672,14 @@ app.post('/api/patients', authenticateToken, [
         
         const [result] = await db.execute(
             `INSERT INTO patients (
-                hn, pt_number, pid, passport_no, title, first_name, last_name, 
+                hn, pt_number, pid, passport_no, title, first_name, last_name,
                 dob, gender, phone, email, address, emergency_contact, emergency_phone,
-                diagnosis, rehab_goal, rehab_goal_other, body_area, frequency, 
-                expected_duration, doctor_note, precaution, contraindication, 
+                diagnosis, rehab_goal, rehab_goal_other, body_area, frequency,
+                expected_duration, doctor_note, precaution, contraindication,
                 medical_history, clinic_id, created_by
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             [
-                patientData.hn, ptNumber, patientData.pid, patientData.passport_no,
+                actualPTHN, ptNumber, patientData.pid, patientData.passport_no,
                 patientData.title, patientData.first_name, patientData.last_name,
                 patientData.dob, patientData.gender, patientData.phone, patientData.email,
                 patientData.address, patientData.emergency_contact, patientData.emergency_phone,
