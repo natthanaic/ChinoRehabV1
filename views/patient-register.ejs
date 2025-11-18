@@ -122,11 +122,11 @@
 
                 <form id="patientForm" novalidate>
 
-                    <!-- ROW 1: Identifiers + Name -->
+                    <!-- ROW 1: Patient Identifiers (Full Width) -->
                     <div class="row">
-                        <div class="col-lg-6 mb-2">
+                        <div class="col-12 mb-2">
                             <!-- ==================== IDENTIFIERS ==================== -->
-                            <div class="form-section h-100">
+                            <div class="form-section">
                                 <h5><i class="bi bi-fingerprint me-2"></i>Patient Identifiers</h5>
 
                                 <!-- Thai ID & Passport Input -->
@@ -192,7 +192,10 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
 
+                    <!-- ROW 2: Name Information + Demographics -->
+                    <div class="row">
                         <div class="col-lg-6 mb-2 hidden-until-verified" id="nameSection">
                             <!-- ==================== NAME INFORMATION ==================== -->
                             <div class="form-section h-100">
@@ -229,12 +232,10 @@
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <!-- ROW 2: Demographics & Contact (Full Width) -->
-                    <div class="row hidden-until-verified" id="demographicsSection">
-                        <div class="col-12 mb-2">
-                            <div class="form-section">
+                        <div class="col-lg-6 mb-2 hidden-until-verified" id="demographicsSection">
+                            <!-- ==================== DEMOGRAPHICS & CONTACT ==================== -->
+                            <div class="form-section h-100">
                                 <h5><i class="bi bi-calendar3 me-2"></i>Demographics & Contact</h5>
                                 <div class="row">
                                     <div class="col-lg-2 col-md-3 mb-2">
