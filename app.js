@@ -1352,6 +1352,245 @@ app.get('/api/patients/:id', authenticateToken, async (req, res) => {
     }
 });
 
+// ====================================================================
+// HN VALIDATION HELPER FUNCTIONS
+// ====================================================================
+
+// Validate Thai National ID checksum
+function validateThaiNationalID(pid) {
+    if (!pid || typeof pid !== 'string') return false;
+    pid = pid.replace(/[\s-]/g, '');
+    if (!/^\d{13}$/.test(pid)) return false;
+
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+        sum += parseInt(pid[i]) * (13 - i);
+    }
+    const checksum = (11 - (sum % 11)) % 10;
+    return checksum === parseInt(pid[12]);
+}
+
+// Validate Passport ID format
+function validatePassportID(passport) {
+    if (!passport || typeof passport !== 'string') return false;
+    passport = passport.replace(/\s/g, '');
+    return /^[A-Z0-9]{6,20}$/i.test(passport);
+}
+
+// Generate next PTHN with format PTYYXXXX
+async function generateNextPTHN(db) {
+    const currentYear = parseInt(moment().format('YY'));
+
+    return new Promise((resolve, reject) => {
+        db.getConnection((err, connection) => {
+            if (err) return reject(err);
+
+            connection.beginTransaction(async (err) => {
+                if (err) {
+                    connection.release();
+                    return reject(err);
+                }
+
+                const getSequenceQuery = `
+                    SELECT last_sequence
+                    FROM pthn_sequence
+                    WHERE year = ?
+                    FOR UPDATE
+                `;
+
+                connection.query(getSequenceQuery, [currentYear], (err, results) => {
+                    if (err) {
+                        return connection.rollback(() => {
+                            connection.release();
+                            reject(err);
+                        });
+                    }
+
+                    let nextSequence;
+
+                    if (results.length === 0) {
+                        nextSequence = 1;
+                        const insertQuery = `INSERT INTO pthn_sequence (year, last_sequence) VALUES (?, ?)`;
+
+                        connection.query(insertQuery, [currentYear, nextSequence], (err) => {
+                            if (err) {
+                                return connection.rollback(() => {
+                                    connection.release();
+                                    reject(err);
+                                });
+                            }
+                            commitAndResolve(nextSequence);
+                        });
+                    } else {
+                        nextSequence = results[0].last_sequence + 1;
+
+                        if (nextSequence > 9999) {
+                            return connection.rollback(() => {
+                                connection.release();
+                                reject(new Error('PTHN sequence limit reached for this year (max 9999)'));
+                            });
+                        }
+
+                        const updateQuery = `UPDATE pthn_sequence SET last_sequence = ? WHERE year = ?`;
+
+                        connection.query(updateQuery, [nextSequence, currentYear], (err) => {
+                            if (err) {
+                                return connection.rollback(() => {
+                                    connection.release();
+                                    reject(err);
+                                });
+                            }
+                            commitAndResolve(nextSequence);
+                        });
+                    }
+
+                    function commitAndResolve(sequence) {
+                        connection.commit((err) => {
+                            if (err) {
+                                return connection.rollback(() => {
+                                    connection.release();
+                                    reject(err);
+                                });
+                            }
+                            connection.release();
+                            const pthn = `PT${currentYear.toString().padStart(2, '0')}${sequence.toString().padStart(4, '0')}`;
+                            resolve(pthn);
+                        });
+                    }
+                });
+            });
+        });
+    });
+}
+
+// ====================================================================
+// HN VALIDATION API ENDPOINT
+// ====================================================================
+
+// Check if Thai ID or Passport exists and get next PTHN
+app.post('/api/patients/check-id', authenticateToken, async (req, res) => {
+    const { pid, passport } = req.body;
+
+    // Validation: At least one ID must be provided
+    if (!pid && !passport) {
+        return res.status(400).json({
+            success: false,
+            message: 'Please provide at least Thai ID or Passport number.'
+        });
+    }
+
+    const pidValue = pid ? pid.trim() : null;
+    const passportValue = passport ? passport.trim() : null;
+
+    try {
+        // Validate Thai ID format if provided
+        if (pidValue) {
+            if (!validateThaiNationalID(pidValue)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid Thai National ID format or checksum.'
+                });
+            }
+        }
+
+        // Validate Passport format if provided
+        if (passportValue) {
+            if (!validatePassportID(passportValue)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Invalid passport format. Use 6-20 alphanumeric characters.'
+                });
+            }
+        }
+
+        const db = req.app.locals.db;
+
+        // Build query to check if EITHER Thai ID OR Passport exists
+        let checkQuery;
+        let queryParams;
+
+        if (pidValue && passportValue) {
+            // Both provided - check either
+            checkQuery = `
+                SELECT
+                    p.id, p.hn, p.pt_number, p.title,
+                    p.first_name, p.last_name, p.dob,
+                    p.created_at, c.name as clinic_name
+                FROM patients p
+                LEFT JOIN clinics c ON p.clinic_id = c.id
+                WHERE p.pid = ? OR p.passport_no = ?
+                LIMIT 1
+            `;
+            queryParams = [pidValue, passportValue];
+        } else if (pidValue) {
+            // Only Thai ID provided
+            checkQuery = `
+                SELECT
+                    p.id, p.hn, p.pt_number, p.title,
+                    p.first_name, p.last_name, p.dob,
+                    p.created_at, c.name as clinic_name
+                FROM patients p
+                LEFT JOIN clinics c ON p.clinic_id = c.id
+                WHERE p.pid = ?
+                LIMIT 1
+            `;
+            queryParams = [pidValue];
+        } else {
+            // Only Passport provided
+            checkQuery = `
+                SELECT
+                    p.id, p.hn, p.pt_number, p.title,
+                    p.first_name, p.last_name, p.dob,
+                    p.created_at, c.name as clinic_name
+                FROM patients p
+                LEFT JOIN clinics c ON p.clinic_id = c.id
+                WHERE p.passport_no = ?
+                LIMIT 1
+            `;
+            queryParams = [passportValue];
+        }
+
+        const [results] = await db.query(checkQuery, queryParams);
+
+        if (results.length > 0) {
+            // ID exists - return patient information
+            const patient = results[0];
+            return res.json({
+                success: true,
+                isDuplicate: true,
+                patient: {
+                    id: patient.id,
+                    hn: patient.hn,
+                    pt_number: patient.pt_number,
+                    title: patient.title,
+                    first_name: patient.first_name,
+                    last_name: patient.last_name,
+                    dob: patient.dob,
+                    clinic_name: patient.clinic_name,
+                    created_at: patient.created_at
+                },
+                message: 'This ID is already registered.'
+            });
+        } else {
+            // ID available - generate next PTHN
+            const nextPTHN = await generateNextPTHN(db);
+            return res.json({
+                success: true,
+                isDuplicate: false,
+                nextPTHN: nextPTHN,
+                message: 'ID is available. You can create a new patient.'
+            });
+        }
+
+    } catch (error) {
+        console.error('Check ID error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'An error occurred while checking the ID.'
+        });
+    }
+});
+
 // Create patient
 app.post('/api/patients', authenticateToken, [
     body('hn').notEmpty(),
