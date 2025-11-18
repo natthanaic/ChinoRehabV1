@@ -123,30 +123,66 @@
                             <!-- ==================== IDENTIFIERS ==================== -->
                             <div class="form-section h-100">
                                 <h5><i class="bi bi-fingerprint me-2"></i>Patient Identifiers</h5>
+
+                                <!-- Thai ID & Passport Input -->
                                 <div class="row">
-                                    <div class="col-md-4 mb-2">
-                                        <label for="hn" class="form-label required">HN</label>
-                                        <input type="text" class="form-control form-control-sm" id="hn" required placeholder="PT25XXX">
-                                        <div class="invalid-feedback">Required</div>
+                                    <div class="col-md-6 mb-2">
+                                        <label for="pidInput" class="form-label">Thai ID</label>
+                                        <input type="text" class="form-control form-control-sm" id="pidInput" name="pidInput" maxlength="13" placeholder="1234567890123">
+                                        <div class="form-text" style="font-size: 0.7rem;">Optional if Passport provided</div>
+                                        <div class="invalid-feedback" id="pidErrorText"></div>
                                     </div>
-                                    <div class="col-md-4 mb-2">
-                                        <label for="pt_number" class="form-label">PT# <span class="badge badge-auto">Auto</span></label>
-                                        <input type="text" class="form-control form-control-sm" id="pt_number" readonly placeholder="Auto">
-                                    </div>
-                                    <div class="col-md-4 mb-2">
-                                        <label for="pid" class="form-label">Thai ID</label>
-                                        <input type="text" class="form-control form-control-sm" id="pid" maxlength="13" placeholder="1234567890123">
-                                        <div class="invalid-feedback">Invalid</div>
+                                    <div class="col-md-6 mb-2">
+                                        <label for="passportInput" class="form-label">Passport</label>
+                                        <input type="text" class="form-control form-control-sm" id="passportInput" name="passportInput" maxlength="20" placeholder="AB1234567">
+                                        <div class="form-text" style="font-size: 0.7rem;">Optional if Thai ID provided</div>
+                                        <div class="invalid-feedback" id="passportErrorText"></div>
                                     </div>
                                 </div>
+
+                                <!-- Check ID Button -->
+                                <div class="row mb-2">
+                                    <div class="col-12">
+                                        <div class="alert alert-info py-1 px-2 mb-1" style="font-size: 0.75rem;">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            <strong>Required:</strong> Provide at least Thai ID or Passport, then verify below.
+                                        </div>
+                                        <button class="btn btn-primary btn-sm w-100" type="button" id="btnCheckID">
+                                            <i class="bi bi-search"></i> Check ID & Generate HN
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Verification Alert -->
+                                <div class="row">
+                                    <div class="col-12" id="verificationSection" style="display: none;">
+                                        <div class="alert py-2 px-2 mb-2" role="alert" id="verificationAlert" style="font-size: 0.8rem;"></div>
+                                    </div>
+                                </div>
+
+                                <!-- HN & PT# (Auto-generated) -->
                                 <div class="row">
                                     <div class="col-md-6 mb-2">
-                                        <label for="passport_no" class="form-label">Passport</label>
-                                        <input type="text" class="form-control form-control-sm" id="passport_no" placeholder="A12345678">
+                                        <label for="hn" class="form-label required">HN <span class="badge badge-auto">Auto</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="hn" name="hn" required readonly placeholder="PT25XXX">
+                                        <div class="form-text" style="font-size: 0.7rem;">Generated after verification</div>
                                     </div>
                                     <div class="col-md-6 mb-2">
+                                        <label for="pt_number" class="form-label">PT# <span class="badge badge-auto">Auto</span></label>
+                                        <input type="text" class="form-control form-control-sm" id="pt_number" name="pt_number" readonly placeholder="Auto">
+                                        <div class="form-text" style="font-size: 0.7rem;">Generated on save</div>
+                                    </div>
+                                </div>
+
+                                <!-- Hidden fields for backward compatibility -->
+                                <input type="hidden" id="pid" name="pid">
+                                <input type="hidden" id="passport" name="passport">
+
+                                <!-- Other ID -->
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
                                         <label for="ssn" class="form-label">Other ID</label>
-                                        <input type="text" class="form-control form-control-sm" id="ssn" placeholder="SSN or other">
+                                        <input type="text" class="form-control form-control-sm" id="ssn" name="ssn" placeholder="SSN or other">
                                     </div>
                                 </div>
                             </div>
@@ -894,5 +930,79 @@
             console.log('HL7 FHIR Patient Registration - Ready');
         });
     </script>
+
+    <!-- HN Validation Alert Templates -->
+    <template id="templateIdAvailable">
+        <div class="alert alert-success" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1" style="font-size: 0.9rem;">ID Verified - Ready to Create Patient</h6>
+                    <p class="mb-2" style="font-size: 0.8rem;">This ID is not registered in the system.</p>
+                    <div class="bg-white p-2 rounded border">
+                        <strong style="font-size: 0.8rem;">New PTHN will be:</strong>
+                        <span class="badge bg-primary" id="previewPTHN" style="font-size: 0.85rem;">PT250001</span>
+                    </div>
+                    <small class="text-muted d-block mt-2">
+                        You can now fill in patient details and submit the form.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="templateIdExists">
+        <div class="alert alert-warning" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1" style="font-size: 0.9rem;">Duplicate ID Detected</h6>
+                    <p class="mb-2" style="font-size: 0.8rem;">This ID is already registered in the system:</p>
+
+                    <div class="card bg-white mb-2">
+                        <div class="card-body p-2">
+                            <div class="row g-2 small" style="font-size: 0.75rem;">
+                                <div class="col-md-6"><strong>HN:</strong> <span id="existingHN">-</span></div>
+                                <div class="col-md-6"><strong>PT#:</strong> <span id="existingPT">-</span></div>
+                                <div class="col-md-6"><strong>Name:</strong> <span id="existingName">-</span></div>
+                                <div class="col-md-6"><strong>DOB:</strong> <span id="existingDOB">-</span></div>
+                                <div class="col-md-6"><strong>Clinic:</strong> <span id="existingClinic">-</span></div>
+                                <div class="col-md-6"><strong>Registered:</strong> <span id="existingDate">-</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnViewPatient">
+                            <i class="bi bi-eye"></i> View Patient Details
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning" id="btnCreatePN">
+                            <i class="bi bi-plus-circle"></i> Create New PN Case Instead
+                        </button>
+                    </div>
+
+                    <small class="text-muted d-block mt-2">
+                        <strong>Note:</strong> If you need to create a new treatment case (PN) for this existing patient, click "Create New PN Case Instead".
+                    </small>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="templateVerificationError">
+        <div class="alert alert-danger" role="alert">
+            <div class="d-flex align-items-start">
+                <i class="bi bi-x-circle-fill me-2 fs-5"></i>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1" style="font-size: 0.9rem;">Verification Failed</h6>
+                    <p class="mb-0" style="font-size: 0.8rem;" id="errorMessage">Unable to verify ID. Please try again.</p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Load HN Validation JavaScript -->
+    <script src="/js/hn-validation.js"></script>
+
 </body>
 </html>
