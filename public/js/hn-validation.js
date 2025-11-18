@@ -159,11 +159,14 @@ elements.btnCheckID.addEventListener('click', async function() {
 
 // API Functions
 async function checkIDDuplication(pidValue, passportValue) {
+    // Get token from cookie (same as patient registration form)
+    const token = getCookie('authToken');
+
     const response = await fetch('/api/patients/check-id', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
             pid: pidValue || null,
@@ -177,6 +180,14 @@ async function checkIDDuplication(pidValue, passportValue) {
     }
 
     return await response.json();
+}
+
+// Helper function to get cookie value
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return null;
 }
 
 // UI Update Functions
