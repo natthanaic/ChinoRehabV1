@@ -284,13 +284,13 @@ function resetVerificationState() {
 }
 
 function handleViewPatient(patientId) {
-    window.open(`/patients/${patientId}`, '_blank');
+    window.open(`/patient/${patientId}`, '_blank');
 }
 
 function handleCreatePN(patientId, patientHN) {
     // Redirect to patient detail page where PN can be created
     if (confirm(`This will take you to patient ${patientHN}'s detail page where you can create a new PN (Patient Number) case.\n\nContinue?`)) {
-        window.location.href = `/patients/${patientId}`;
+        window.location.href = `/patient/${patientId}`;
     }
 }
 
