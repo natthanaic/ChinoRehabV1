@@ -21,8 +21,14 @@ VALUES (CAST(DATE_FORMAT(NOW(), '%y') AS UNSIGNED), 0)
 ON DUPLICATE KEY UPDATE `year` = `year`;
 
 -- 3. Add unique constraint on HN (if not exists)
-ALTER TABLE `patients`
-ADD UNIQUE KEY `unique_hn` (`hn`);
+SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
+               WHERE table_schema = DATABASE()
+               AND table_name = 'patients'
+               AND index_name = 'unique_hn');
+SET @sqlstmt := IF(@exist = 0, 'ALTER TABLE `patients` ADD UNIQUE KEY `unique_hn` (`hn`)', 'SELECT "unique_hn already exists" AS Info');
+PREPARE stmt FROM @sqlstmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- 4. Add unique constraint on Thai ID (pid)
 -- First, check if index exists and drop it
@@ -30,14 +36,20 @@ SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
                WHERE table_schema = DATABASE()
                AND table_name = 'patients'
                AND index_name = 'idx_patient_pid');
-SET @sqlstmt := IF(@exist > 0, 'ALTER TABLE `patients` DROP INDEX `idx_patient_pid`', 'SELECT 1');
+SET @sqlstmt := IF(@exist > 0, 'ALTER TABLE `patients` DROP INDEX `idx_patient_pid`', 'SELECT "idx_patient_pid does not exist" AS Info');
 PREPARE stmt FROM @sqlstmt;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
--- Add unique constraint on pid
-ALTER TABLE `patients`
-ADD UNIQUE KEY `unique_pid` (`pid`);
+-- Add unique constraint on pid (if not exists)
+SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
+               WHERE table_schema = DATABASE()
+               AND table_name = 'patients'
+               AND index_name = 'unique_pid');
+SET @sqlstmt := IF(@exist = 0, 'ALTER TABLE `patients` ADD UNIQUE KEY `unique_pid` (`pid`)', 'SELECT "unique_pid already exists" AS Info');
+PREPARE stmt FROM @sqlstmt;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- 5. Add index on passport_no (if not exists)
 SET @exist := (SELECT COUNT(*) FROM information_schema.statistics
