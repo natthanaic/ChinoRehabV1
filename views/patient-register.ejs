@@ -485,9 +485,65 @@
         // HL7 FHIR Patient Registration - Enhanced JavaScript
         // ============================================================================
 
-        // Set max date for DOB (HTML5 date input)
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('dob').max = today;
+        // Format date from DD/MM/YYYY to YYYY-MM-DD for backend
+        function convertDateToISO(dateStr) {
+            if (!dateStr) return '';
+
+            // If already in YYYY-MM-DD format, return as-is
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                return dateStr;
+            }
+
+            // Convert DD/MM/YYYY to YYYY-MM-DD
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+            }
+
+            return dateStr;
+        }
+
+        // Validate DD/MM/YYYY date format
+        function validateDateFormat(dateStr) {
+            if (!dateStr) return false;
+
+            // Accept DD/MM/YYYY or D/M/YYYY
+            const regex = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+            const match = dateStr.match(regex);
+
+            if (!match) return false;
+
+            const day = parseInt(match[1], 10);
+            const month = parseInt(match[2], 10);
+            const year = parseInt(match[3], 10);
+
+            // Check valid ranges
+            if (month < 1 || month > 12) return false;
+            if (day < 1 || day > 31) return false;
+            if (year < 1900 || year > new Date().getFullYear()) return false;
+
+            // Check valid day for month
+            const daysInMonth = new Date(year, month, 0).getDate();
+            if (day > daysInMonth) return false;
+
+            return true;
+        }
+
+        // Add date validation on blur
+        document.getElementById('dob')?.addEventListener('blur', (e) => {
+            const value = e.target.value.trim();
+            if (value && !validateDateFormat(value)) {
+                e.target.classList.add('is-invalid');
+                e.target.setCustomValidity('Invalid date format. Use DD/MM/YYYY');
+            } else {
+                e.target.classList.remove('is-invalid');
+                e.target.setCustomValidity('');
+                if (value) e.target.classList.add('is-valid');
+            }
+        });
 
         // Load clinics
         async function loadClinics() {
@@ -611,6 +667,14 @@
                 goals.push(...otherGoals.split(',').map(g => g.trim()));
             }
 
+            // Validate and convert date
+            const dobValue = document.getElementById('dob').value.trim();
+            if (dobValue && !validateDateFormat(dobValue)) {
+                showAlert('Please enter a valid date in DD/MM/YYYY format', 'danger');
+                document.getElementById('dob').focus();
+                return;
+            }
+
             // Build HL7 FHIR-compliant payload (backward compatible with existing API)
             const formData = {
                 // Identifiers
@@ -628,7 +692,7 @@
 
                 // Demographics
                 gender: document.getElementById('gender').value,
-                dob: document.getElementById('dob').value,
+                dob: convertDateToISO(dobValue), // Convert DD/MM/YYYY to YYYY-MM-DD
                 marital_status: document.getElementById('marital_status').value,
                 language_primary: document.getElementById('language_primary').value,
 
