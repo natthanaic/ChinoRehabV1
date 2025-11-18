@@ -230,6 +230,20 @@
                                         <input type="text" class="form-control form-control-sm" id="middle_name" placeholder="Middle name (optional)">
                                     </div>
                                 </div>
+
+                                <!-- Clinic Assignment -->
+                                <% if (user.role === 'ADMIN' || user.role === 'PT' || user.role === 'PT_ADMIN') { %>
+                                <div class="row mt-3 pt-3 border-top">
+                                    <div class="col-md-12 mb-2">
+                                        <h6 class="mb-2"><i class="bi bi-building me-2"></i>Clinic Assignment</h6>
+                                        <label for="clinic_id" class="form-label required">Clinic</label>
+                                        <select class="form-select form-select-sm" id="clinic_id" required>
+                                            <option value="">Select Clinic</option>
+                                        </select>
+                                        <div class="invalid-feedback">Please select a clinic</div>
+                                    </div>
+                                </div>
+                                <% } %>
                             </div>
                         </div>
 
@@ -511,25 +525,6 @@
                                         <textarea class="form-control form-control-sm" id="doctor_note" rows="2" placeholder="Notes"></textarea>
                                     </div>
                                 </div>
-
-                                <!-- === MOVED CLINIC ASSIGNMENT === -->
-                                <% if (user.role === 'ADMIN' || user.role === 'PT' || user.role === 'PT_ADMIN') { %>
-                                <div class="row mt-3 pt-3 border-top"> <!-- Added divider -->
-                                    <div class="col-lg-6">
-                                        <h5><i class="bi bi-building me-2"></i>Clinic Assignment</h5>
-                                        <div class="row">
-                                            <div class="col-md-12 mb-2">
-                                                <label for="clinic_id" class="form-label required">Clinic</label>
-                                                <select class="form-select form-select-sm" id="clinic_id" required>
-                                                    <option value="">Select Clinic</option>
-                                                </select>
-                                                <div class="invalid-feedback">Please select a clinic</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <% } %>
-                                <!-- === END MOVED BLOCK === -->
 
                             </div>
                         </div>
