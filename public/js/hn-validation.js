@@ -1,12 +1,13 @@
 /**
  * HN Creation & Validation - Client-Side JavaScript
  * Handles ID verification, PTHN preview, and form validation
+ * LOGIC: Patient MUST provide at least Thai ID OR Passport (not both empty)
  */
 
 // Global State
 const HNValidationState = {
-    idType: null,
-    idValue: null,
+    pidValue: null,
+    passportValue: null,
     isVerified: false,
     isDuplicate: false,
     previewPTHN: null,
@@ -15,11 +16,10 @@ const HNValidationState = {
 
 // DOM Elements
 const elements = {
-    idType: document.getElementById('idType'),
-    idValue: document.getElementById('idValue'),
-    idValueLabel: document.getElementById('idValueLabel'),
-    idHelperText: document.getElementById('idHelperText'),
-    idErrorText: document.getElementById('idErrorText'),
+    pidInput: document.getElementById('pidInput'),
+    passportInput: document.getElementById('passportInput'),
+    pidErrorText: document.getElementById('pidErrorText'),
+    passportErrorText: document.getElementById('passportErrorText'),
     btnCheckID: document.getElementById('btnCheckID'),
     hn: document.getElementById('hn'),
     pid: document.getElementById('pid'),
@@ -34,6 +34,7 @@ const elements = {
 
 // Validation Functions
 function validateThaiNationalID(id) {
+    if (!id) return false;
     id = id.replace(/[\s-]/g, '');
     if (!/^\d{13}$/.test(id)) return false;
 
@@ -46,99 +47,93 @@ function validateThaiNationalID(id) {
 }
 
 function validatePassportID(passport) {
+    if (!passport) return false;
     passport = passport.replace(/\s/g, '');
     return /^[A-Z0-9]{6,20}$/i.test(passport);
 }
 
-function formatThaiID(id) {
-    id = id.replace(/[\s-]/g, '');
-    if (id.length === 13) {
-        return `${id.substring(0, 1)}-${id.substring(1, 5)}-${id.substring(5, 10)}-${id.substring(10, 12)}-${id.substring(12, 13)}`;
-    }
-    return id;
-}
-
 // Event Handlers
-elements.idType.addEventListener('change', function() {
-    const selectedType = this.value;
-    HNValidationState.idType = selectedType;
-
-    elements.idValue.value = '';
-    elements.hn.value = '';
+elements.pidInput.addEventListener('input', function() {
+    const value = this.value.trim();
+    HNValidationState.pidValue = value;
     resetVerificationState();
+});
 
-    if (selectedType === 'thai_id') {
-        elements.idValueLabel.textContent = 'Thai National ID';
-        elements.idValue.placeholder = '1234567890123';
-        elements.idValue.maxLength = 13;
-        elements.idHelperText.textContent = '13-digit Thai National ID';
-        elements.btnCheckID.disabled = false;
-    } else if (selectedType === 'passport') {
-        elements.idValueLabel.textContent = 'Passport Number';
-        elements.idValue.placeholder = 'AB1234567';
-        elements.idValue.maxLength = 20;
-        elements.idHelperText.textContent = '6-20 alphanumeric characters';
-        elements.btnCheckID.disabled = false;
-    } else {
-        elements.idValueLabel.textContent = 'ID Number';
-        elements.idValue.placeholder = 'Enter ID number';
-        elements.idHelperText.textContent = 'Select ID type first';
-        elements.btnCheckID.disabled = true;
+elements.pidInput.addEventListener('blur', function() {
+    const value = this.value.trim();
+
+    if (!value) {
+        elements.pidInput.classList.remove('is-invalid');
+        elements.pidErrorText.textContent = '';
+        return;
     }
 
-    if (selectedType) {
-        elements.idValue.focus();
+    const isValid = validateThaiNationalID(value);
+
+    if (!isValid) {
+        elements.pidInput.classList.add('is-invalid');
+        elements.pidErrorText.textContent = 'Invalid Thai National ID checksum.';
+    } else {
+        elements.pidInput.classList.remove('is-invalid');
+        elements.pidErrorText.textContent = '';
+        HNValidationState.pidValue = value;
     }
 });
 
-elements.idValue.addEventListener('input', function() {
+elements.passportInput.addEventListener('input', function() {
     const value = this.value.trim();
-    HNValidationState.idValue = value;
+    HNValidationState.passportValue = value;
     resetVerificationState();
-
-    if (HNValidationState.idType === 'thai_id') {
-        elements.btnCheckID.disabled = value.length !== 13;
-    } else if (HNValidationState.idType === 'passport') {
-        elements.btnCheckID.disabled = value.length < 6;
-    }
 });
 
-elements.idValue.addEventListener('blur', function() {
+elements.passportInput.addEventListener('blur', function() {
     const value = this.value.trim();
-    if (!value) return;
 
-    let isValid = false;
-    let errorMessage = '';
-
-    if (HNValidationState.idType === 'thai_id') {
-        isValid = validateThaiNationalID(value);
-        errorMessage = 'Invalid Thai National ID. Please check the checksum.';
-        if (isValid) {
-            HNValidationState.idValue = value;
-        }
-    } else if (HNValidationState.idType === 'passport') {
-        isValid = validatePassportID(value);
-        errorMessage = 'Invalid passport format. Use 6-20 alphanumeric characters.';
+    if (!value) {
+        elements.passportInput.classList.remove('is-invalid');
+        elements.passportErrorText.textContent = '';
+        return;
     }
 
-    if (value && !isValid) {
-        elements.idValue.classList.add('is-invalid');
-        elements.idErrorText.textContent = errorMessage;
-        elements.btnCheckID.disabled = true;
+    const isValid = validatePassportID(value);
+
+    if (!isValid) {
+        elements.passportInput.classList.add('is-invalid');
+        elements.passportErrorText.textContent = 'Invalid passport format. Use 6-20 alphanumeric characters.';
     } else {
-        elements.idValue.classList.remove('is-invalid');
-        elements.idErrorText.textContent = '';
-        elements.btnCheckID.disabled = false;
+        elements.passportInput.classList.remove('is-invalid');
+        elements.passportErrorText.textContent = '';
+        HNValidationState.passportValue = value.toUpperCase();
+        elements.passportInput.value = value.toUpperCase();
     }
 });
 
 elements.btnCheckID.addEventListener('click', async function() {
-    const idType = HNValidationState.idType;
-    const idValue = HNValidationState.idValue;
+    const pidValue = elements.pidInput.value.trim();
+    const passportValue = elements.passportInput.value.trim();
 
-    if (!idType || !idValue) {
-        alert('Please select ID type and enter ID number.');
+    // Validation: Must have at least one ID
+    if (!pidValue && !passportValue) {
+        showErrorAlert('Please provide at least Thai ID or Passport number.');
         return;
+    }
+
+    // Validate Thai ID if provided
+    if (pidValue) {
+        if (!validateThaiNationalID(pidValue)) {
+            elements.pidInput.classList.add('is-invalid');
+            elements.pidErrorText.textContent = 'Invalid Thai National ID checksum.';
+            return;
+        }
+    }
+
+    // Validate Passport if provided
+    if (passportValue) {
+        if (!validatePassportID(passportValue)) {
+            elements.passportInput.classList.add('is-invalid');
+            elements.passportErrorText.textContent = 'Invalid passport format.';
+            return;
+        }
     }
 
     const originalText = this.innerHTML;
@@ -146,7 +141,7 @@ elements.btnCheckID.addEventListener('click', async function() {
     this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Checking...';
 
     try {
-        const result = await checkIDDuplication(idType, idValue);
+        const result = await checkIDDuplication(pidValue, passportValue);
 
         if (result.isDuplicate) {
             showDuplicateAlert(result.patient);
@@ -163,14 +158,17 @@ elements.btnCheckID.addEventListener('click', async function() {
 });
 
 // API Functions
-async function checkIDDuplication(idType, idValue) {
+async function checkIDDuplication(pidValue, passportValue) {
     const response = await fetch('/api/patients/check-id', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ idType, idValue })
+        body: JSON.stringify({
+            pid: pidValue || null,
+            passport: passportValue || null
+        })
     });
 
     if (!response.ok) {
@@ -197,13 +195,9 @@ function showAvailableAlert(nextPTHN) {
 
     elements.hn.value = nextPTHN;
 
-    if (HNValidationState.idType === 'thai_id') {
-        elements.pid.value = HNValidationState.idValue;
-        elements.passport.value = '';
-    } else if (HNValidationState.idType === 'passport') {
-        elements.passport.value = HNValidationState.idValue;
-        elements.pid.value = '';
-    }
+    // Set hidden fields
+    elements.pid.value = HNValidationState.pidValue || '';
+    elements.passport.value = HNValidationState.passportValue || '';
 
     elements.verificationSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     updateWorkflowStep(2);
@@ -309,7 +303,7 @@ function formatDate(dateStr) {
 elements.patientForm.addEventListener('submit', function(e) {
     if (!HNValidationState.isVerified) {
         e.preventDefault();
-        alert('Please verify the patient ID first by clicking "Check ID" button.');
+        alert('Please verify the patient ID first by clicking "Check ID & Generate HN" button.');
         elements.btnCheckID.focus();
         return false;
     }

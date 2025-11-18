@@ -105,32 +105,37 @@ function setupHNValidationRoutes(app, db, authenticateToken) {
     /**
      * POST /api/patients/check-id
      * Check if Thai ID or Passport exists and get next PTHN
+     * Request body: { pid: "xxx" | null, passport: "xxx" | null }
+     * At least one must be provided
      */
-    app.post('/api/patients/check-id', authenticateToken, [
-        body('idType').isIn(['thai_id', 'passport']).withMessage('Invalid ID type'),
-        body('idValue').notEmpty().withMessage('ID value is required')
-    ], async (req, res) => {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
+    app.post('/api/patients/check-id', authenticateToken, async (req, res) => {
+        const { pid, passport } = req.body;
+
+        // Validation: At least one ID must be provided
+        if (!pid && !passport) {
             return res.status(400).json({
                 success: false,
-                errors: errors.array()
+                message: 'Please provide at least Thai ID or Passport number.'
             });
         }
 
-        const { idType, idValue } = req.body;
+        const pidValue = pid ? pid.trim() : null;
+        const passportValue = passport ? passport.trim() : null;
 
         try {
-            // Validate ID format
-            if (idType === 'thai_id') {
-                if (!validateThaiNationalID(idValue)) {
+            // Validate Thai ID format if provided
+            if (pidValue) {
+                if (!validateThaiNationalID(pidValue)) {
                     return res.status(400).json({
                         success: false,
                         message: 'Invalid Thai National ID format or checksum.'
                     });
                 }
-            } else if (idType === 'passport') {
-                if (!validatePassportID(idValue)) {
+            }
+
+            // Validate Passport format if provided
+            if (passportValue) {
+                if (!validatePassportID(passportValue)) {
                     return res.status(400).json({
                         success: false,
                         message: 'Invalid passport format. Use 6-20 alphanumeric characters.'
@@ -138,11 +143,25 @@ function setupHNValidationRoutes(app, db, authenticateToken) {
                 }
             }
 
-            // Check if ID exists
+            // Build query to check if EITHER Thai ID OR Passport exists
             let checkQuery;
             let queryParams;
 
-            if (idType === 'thai_id') {
+            if (pidValue && passportValue) {
+                // Both provided - check either
+                checkQuery = `
+                    SELECT
+                        p.id, p.hn, p.pt_number, p.title,
+                        p.first_name, p.last_name, p.dob,
+                        p.created_at, c.name as clinic_name
+                    FROM patients p
+                    LEFT JOIN clinics c ON p.clinic_id = c.id
+                    WHERE p.pid = ? OR p.passport_no = ?
+                    LIMIT 1
+                `;
+                queryParams = [pidValue, passportValue];
+            } else if (pidValue) {
+                // Only Thai ID provided
                 checkQuery = `
                     SELECT
                         p.id, p.hn, p.pt_number, p.title,
@@ -153,8 +172,9 @@ function setupHNValidationRoutes(app, db, authenticateToken) {
                     WHERE p.pid = ?
                     LIMIT 1
                 `;
-                queryParams = [idValue];
+                queryParams = [pidValue];
             } else {
+                // Only Passport provided
                 checkQuery = `
                     SELECT
                         p.id, p.hn, p.pt_number, p.title,
@@ -165,7 +185,7 @@ function setupHNValidationRoutes(app, db, authenticateToken) {
                     WHERE p.passport_no = ?
                     LIMIT 1
                 `;
-                queryParams = [idValue];
+                queryParams = [passportValue];
             }
 
             db.query(checkQuery, queryParams, async (err, results) => {

@@ -7,35 +7,43 @@
     </div>
     <div class="card-body">
         <div class="row g-3">
-            <!-- ID Type Selection -->
+            <!-- Thai National ID -->
             <div class="col-md-6">
-                <label class="form-label">ID Type <span class="text-danger">*</span></label>
-                <select class="form-select" id="idType" name="idType" required>
-                    <option value="">-- Select ID Type --</option>
-                    <option value="thai_id">Thai National ID</option>
-                    <option value="passport">Passport</option>
-                </select>
+                <label class="form-label">Thai National ID</label>
+                <input type="text"
+                       class="form-control"
+                       id="pidInput"
+                       name="pidInput"
+                       placeholder="1234567890123"
+                       maxlength="13">
+                <div class="form-text">13-digit Thai National ID (optional if Passport provided)</div>
+                <div class="invalid-feedback" id="pidErrorText"></div>
             </div>
 
-            <!-- ID Value Input with Check Button -->
+            <!-- Passport Number -->
             <div class="col-md-6">
-                <label class="form-label" id="idValueLabel">ID Number <span class="text-danger">*</span></label>
-                <div class="input-group">
-                    <input type="text"
-                           class="form-control"
-                           id="idValue"
-                           name="idValue"
-                           placeholder="Enter ID number"
-                           required>
-                    <button class="btn btn-primary"
-                            type="button"
-                            id="btnCheckID"
-                            disabled>
-                        <i class="bi bi-search"></i> Check ID
-                    </button>
+                <label class="form-label">Passport Number</label>
+                <input type="text"
+                       class="form-control"
+                       id="passportInput"
+                       name="passportInput"
+                       placeholder="AB1234567"
+                       maxlength="20">
+                <div class="form-text">6-20 alphanumeric (optional if Thai ID provided)</div>
+                <div class="invalid-feedback" id="passportErrorText"></div>
+            </div>
+
+            <!-- Check ID Button (Full Width) -->
+            <div class="col-12">
+                <div class="alert alert-info mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Required:</strong> Provide at least Thai ID or Passport, then click the button below to verify.
                 </div>
-                <div class="form-text" id="idHelperText">Select ID type first</div>
-                <div class="invalid-feedback" id="idErrorText"></div>
+                <button class="btn btn-primary btn-lg w-100 mt-2"
+                        type="button"
+                        id="btnCheckID">
+                    <i class="bi bi-search"></i> Check ID & Generate HN
+                </button>
             </div>
 
             <!-- Verification Status & PTHN Preview -->
