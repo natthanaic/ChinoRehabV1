@@ -31,18 +31,19 @@
 
         .form-section {
             background: #f8f9fa;
-            padding: 1.5rem;
-            border-radius: 10px;
-            margin-bottom: 1.5rem;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
             border: 1px solid #e0e0e0;
         }
 
         .form-section h5 {
             color: #667eea;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.4rem;
             border-bottom: 2px solid #667eea;
             font-weight: 600;
+            font-size: 1.1rem;
         }
 
         .required::after {
@@ -105,29 +106,27 @@
                     <div class="form-section">
                         <h5><i class="bi bi-fingerprint me-2"></i>Patient Identifiers</h5>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="hn" class="form-label required">HN</label>
-                                <input type="text" class="form-control" id="hn" required placeholder="PT25XXX">
+                                <input type="text" class="form-control form-control-sm" id="hn" required placeholder="PT25XXX">
                                 <div class="invalid-feedback">Please provide Hospital Number</div>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="pt_number" class="form-label">PT Number <span class="badge badge-auto">Auto</span></label>
-                                <input type="text" class="form-control" id="pt_number" readonly placeholder="Auto-generated">
+                                <input type="text" class="form-control form-control-sm" id="pt_number" readonly placeholder="Auto-generated">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-3 col-md-3 mb-2">
                                 <label for="pid" class="form-label">Thai ID</label>
-                                <input type="text" class="form-control" id="pid" maxlength="13" placeholder="1234567890123">
+                                <input type="text" class="form-control form-control-sm" id="pid" maxlength="13" placeholder="1234567890123">
                                 <div class="invalid-feedback">Invalid ID format</div>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-3 col-md-3 mb-2">
                                 <label for="passport_no" class="form-label">Passport</label>
-                                <input type="text" class="form-control" id="passport_no" placeholder="A12345678">
+                                <input type="text" class="form-control form-control-sm" id="passport_no" placeholder="A12345678">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="ssn" class="form-label">Other ID</label>
-                                <input type="text" class="form-control" id="ssn" placeholder="SSN or other">
+                                <input type="text" class="form-control form-control-sm" id="ssn" placeholder="SSN or other">
                             </div>
                         </div>
                     </div>
@@ -136,9 +135,9 @@
                     <div class="form-section">
                         <h5><i class="bi bi-person-vcard me-2"></i>Name Information</h5>
                         <div class="row">
-                            <div class="col-md-2 mb-3">
+                            <div class="col-lg-1 col-md-2 mb-2">
                                 <label for="title" class="form-label">Title</label>
-                                <input type="text" class="form-control" id="title" placeholder="Mr./Mrs./Ms./Dr." list="titleList">
+                                <input type="text" class="form-control form-control-sm" id="title" placeholder="Mr./Mrs." list="titleList">
                                 <datalist id="titleList">
                                     <option value="Mr.">
                                     <option value="Mrs.">
@@ -148,36 +147,35 @@
                                     <option value="Prof.">
                                 </datalist>
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-4 col-md-4 mb-2">
                                 <label for="first_name" class="form-label required">First Name</label>
-                                <input type="text" class="form-control" id="first_name" required placeholder="First name">
+                                <input type="text" class="form-control form-control-sm" id="first_name" required placeholder="First name">
                                 <div class="invalid-feedback">Please provide first name</div>
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-3 col-md-3 mb-2">
                                 <label for="middle_name" class="form-label">Middle Name</label>
-                                <input type="text" class="form-control" id="middle_name" placeholder="Middle name">
+                                <input type="text" class="form-control form-control-sm" id="middle_name" placeholder="Middle name">
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-4 col-md-3 mb-2">
                                 <label for="last_name" class="form-label required">Last Name</label>
-                                <input type="text" class="form-control" id="last_name" required placeholder="Last name">
+                                <input type="text" class="form-control form-control-sm" id="last_name" required placeholder="Last name">
                                 <div class="invalid-feedback">Please provide last name</div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- ==================== DEMOGRAPHICS ==================== -->
+                    <!-- ==================== DEMOGRAPHICS & CONTACT ==================== -->
                     <div class="form-section">
-                        <h5><i class="bi bi-calendar3 me-2"></i>Demographics</h5>
+                        <h5><i class="bi bi-calendar3 me-2"></i>Demographics & Contact</h5>
                         <div class="row">
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="dob" class="form-label required">Date of Birth</label>
-                                <input type="text" class="form-control" id="dob" required placeholder="DD/MM/YYYY">
-                                <div class="form-text">Example: 23/03/1998</div>
-                                <div class="invalid-feedback">Please enter a valid date (DD/MM/YYYY)</div>
+                                <input type="text" class="form-control form-control-sm" id="dob" required placeholder="DD/MM/YYYY">
+                                <div class="invalid-feedback">Enter DD/MM/YYYY</div>
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="gender" class="form-label required">Gender</label>
-                                <input type="text" class="form-control" id="gender" required placeholder="Male/Female/Other" list="genderList">
+                                <input type="text" class="form-control form-control-sm" id="gender" required placeholder="M/F/O" list="genderList">
                                 <datalist id="genderList">
                                     <option value="M">Male</option>
                                     <option value="F">Female</option>
@@ -185,9 +183,9 @@
                                 </datalist>
                                 <div class="invalid-feedback">Please provide gender</div>
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="marital_status" class="form-label">Marital Status</label>
-                                <input type="text" class="form-control" id="marital_status" placeholder="Single/Married/Divorced" list="maritalList">
+                                <input type="text" class="form-control form-control-sm" id="marital_status" placeholder="S/M/D" list="maritalList">
                                 <datalist id="maritalList">
                                     <option value="S">Single</option>
                                     <option value="M">Married</option>
@@ -197,9 +195,9 @@
                                     <option value="L">Separated</option>
                                 </datalist>
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="language_primary" class="form-label">Language</label>
-                                <input type="text" class="form-control" id="language_primary" placeholder="Thai/English/Chinese" list="languageList">
+                                <input type="text" class="form-control form-control-sm" id="language_primary" placeholder="th/en" list="languageList">
                                 <datalist id="languageList">
                                     <option value="th">Thai</option>
                                     <option value="en">English</option>
@@ -210,68 +208,60 @@
                                     <option value="es">Spanish</option>
                                 </datalist>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- ==================== CONTACT INFORMATION ==================== -->
-                    <div class="form-section">
-                        <h5><i class="bi bi-telephone-fill me-2"></i>Contact Information</h5>
-                        <div class="row">
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-2 col-md-4 mb-2">
                                 <label for="phone" class="form-label">Phone</label>
-                                <input type="tel" class="form-control" id="phone" placeholder="0812345678">
+                                <input type="tel" class="form-control form-control-sm" id="phone" placeholder="0812345678">
                             </div>
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-2 col-md-4 mb-2">
                                 <label for="mobile" class="form-label">Mobile</label>
-                                <input type="tel" class="form-control" id="mobile" placeholder="0898765432">
+                                <input type="tel" class="form-control form-control-sm" id="mobile" placeholder="0898765432">
                             </div>
-                            <div class="col-md-4 mb-3">
+                        </div>
+                        <div class="row">
+                            <div class="col-lg-4 col-md-6 mb-2">
                                 <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" placeholder="patient@example.com">
+                                <input type="email" class="form-control form-control-sm" id="email" placeholder="patient@example.com">
                                 <div class="invalid-feedback">Invalid email format</div>
                             </div>
-                            <div class="col-md-2 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="fax" class="form-label">Fax</label>
-                                <input type="tel" class="form-control" id="fax" placeholder="Fax">
+                                <input type="tel" class="form-control form-control-sm" id="fax" placeholder="Fax">
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- ==================== ADDRESS ==================== -->
-                    <div class="form-section">
-                        <h5><i class="bi bi-geo-alt-fill me-2"></i>Address Information</h5>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="address_line1" class="form-label">Street Address Line 1</label>
-                                <input type="text" class="form-control" id="address_line1" placeholder="123 Main Street">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="address_line2" class="form-label">Street Address Line 2</label>
-                                <input type="text" class="form-control" id="address_line2" placeholder="Apartment, Unit, Suite">
+                            <div class="col-lg-6 col-md-12 mb-2">
+                                <label for="address" class="form-label">Address</label>
+                                <input type="text" class="form-control form-control-sm" id="address" placeholder="Complete address">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-3 mb-3">
+                            <div class="col-lg-3 col-md-4 mb-2">
+                                <label for="address_line1" class="form-label">Address Line 1</label>
+                                <input type="text" class="form-control form-control-sm" id="address_line1" placeholder="Street">
+                            </div>
+                            <div class="col-lg-3 col-md-4 mb-2">
+                                <label for="address_line2" class="form-label">Address Line 2</label>
+                                <input type="text" class="form-control form-control-sm" id="address_line2" placeholder="Apt/Unit">
+                            </div>
+                            <div class="col-lg-2 col-md-4 mb-2">
                                 <label for="address_city" class="form-label">City</label>
-                                <input type="text" class="form-control" id="address_city" placeholder="Bangkok">
+                                <input type="text" class="form-control form-control-sm" id="address_city" placeholder="Bangkok">
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="address_district" class="form-label">District/County</label>
-                                <input type="text" class="form-control" id="address_district" placeholder="Amphoe/District">
+                            <div class="col-lg-2 col-md-4 mb-2">
+                                <label for="address_district" class="form-label">District</label>
+                                <input type="text" class="form-control form-control-sm" id="address_district" placeholder="District">
                             </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="address_state" class="form-label">State/Province</label>
-                                <input type="text" class="form-control" id="address_state" placeholder="Province">
-                            </div>
-                            <div class="col-md-3 mb-3">
-                                <label for="address_postal_code" class="form-label">Postal Code</label>
-                                <input type="text" class="form-control" id="address_postal_code" placeholder="10100">
+                            <div class="col-lg-2 col-md-4 mb-2">
+                                <label for="address_state" class="form-label">State</label>
+                                <input type="text" class="form-control form-control-sm" id="address_state" placeholder="Province">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
+                                <label for="address_postal_code" class="form-label">Postal Code</label>
+                                <input type="text" class="form-control form-control-sm" id="address_postal_code" placeholder="10100">
+                            </div>
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="address_country" class="form-label">Country</label>
-                                <input type="text" class="form-control" id="address_country" value="TH" placeholder="TH/US/GB" list="countryList">
+                                <input type="text" class="form-control form-control-sm" id="address_country" value="TH" placeholder="TH" list="countryList">
                                 <datalist id="countryList">
                                     <option value="TH">Thailand</option>
                                     <option value="US">United States</option>
@@ -282,10 +272,6 @@
                                     <option value="FR">France</option>
                                 </datalist>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="address" class="form-label">Full Address</label>
-                                <textarea class="form-control" id="address" rows="2" placeholder="Complete address"></textarea>
-                            </div>
                         </div>
                     </div>
 
@@ -293,35 +279,33 @@
                     <div class="form-section">
                         <h5><i class="bi bi-person-exclamation me-2"></i>Emergency Contact</h5>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-3 col-md-4 mb-2">
                                 <label for="emergency_contact" class="form-label">Contact Name</label>
-                                <input type="text" class="form-control" id="emergency_contact" placeholder="Full name">
+                                <input type="text" class="form-control form-control-sm" id="emergency_contact" placeholder="Full name">
                             </div>
-                            <div class="col-md-4 mb-3">
+                            <div class="col-lg-2 col-md-3 mb-2">
                                 <label for="emergency_relationship" class="form-label">Relationship</label>
-                                <select class="form-select" id="emergency_relationship">
-                                    <option value="">Select</option>
+                                <input type="text" class="form-control form-control-sm" id="emergency_relationship" placeholder="Spouse/Parent" list="relationshipList">
+                                <datalist id="relationshipList">
                                     <option value="spouse">Spouse</option>
                                     <option value="parent">Parent</option>
                                     <option value="child">Child</option>
                                     <option value="sibling">Sibling</option>
                                     <option value="friend">Friend</option>
                                     <option value="other">Other</option>
-                                </select>
+                                </datalist>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="emergency_phone" class="form-label">Contact Phone</label>
-                                <input type="tel" class="form-control" id="emergency_phone" placeholder="+66-XX-XXX-XXXX">
+                            <div class="col-lg-2 col-md-3 mb-2">
+                                <label for="emergency_phone" class="form-label">Phone</label>
+                                <input type="tel" class="form-control form-control-sm" id="emergency_phone" placeholder="0812345678">
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="emergency_email" class="form-label">Contact Email</label>
-                                <input type="email" class="form-control" id="emergency_email" placeholder="contact@example.com">
+                            <div class="col-lg-3 col-md-4 mb-2">
+                                <label for="emergency_email" class="form-label">Email</label>
+                                <input type="email" class="form-control form-control-sm" id="emergency_email" placeholder="contact@example.com">
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="emergency_address" class="form-label">Contact Address</label>
-                                <textarea class="form-control" id="emergency_address" rows="2" placeholder="Full address"></textarea>
+                            <div class="col-lg-2 col-md-4 mb-2">
+                                <label for="emergency_address" class="form-label">Address</label>
+                                <input type="text" class="form-control form-control-sm" id="emergency_address" placeholder="Address">
                             </div>
                         </div>
                     </div>
@@ -330,26 +314,22 @@
                     <div class="form-section">
                         <h5><i class="bi bi-heart-pulse me-2"></i>Clinical Information</h5>
                         <div class="row">
-                            <div class="col-md-12 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-2">
                                 <label for="diagnosis" class="form-label required">Primary Diagnosis</label>
-                                <textarea class="form-control" id="diagnosis" rows="3" required placeholder="Chief complaint or primary diagnosis"></textarea>
-                                <div class="invalid-feedback">Please provide primary diagnosis</div>
+                                <textarea class="form-control form-control-sm" id="diagnosis" rows="2" required placeholder="Chief complaint"></textarea>
+                                <div class="invalid-feedback">Required</div>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-2">
                                 <label for="medical_history" class="form-label">Medical History</label>
-                                <textarea class="form-control" id="medical_history" rows="3" placeholder="Past medical conditions, surgeries"></textarea>
+                                <textarea class="form-control form-control-sm" id="medical_history" rows="2" placeholder="Past conditions"></textarea>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-3 col-md-6 mb-2">
                                 <label for="allergies" class="form-label">Allergies</label>
-                                <textarea class="form-control" id="allergies" rows="3" placeholder="Known allergies (medications, food, environmental)"></textarea>
+                                <textarea class="form-control form-control-sm" id="allergies" rows="2" placeholder="Known allergies"></textarea>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label for="medications" class="form-label">Current Medications</label>
-                                <textarea class="form-control" id="medications" rows="2" placeholder="List of current medications with dosages"></textarea>
+                            <div class="col-lg-3 col-md-6 mb-2">
+                                <label for="medications" class="form-label">Medications</label>
+                                <textarea class="form-control form-control-sm" id="medications" rows="2" placeholder="Current meds"></textarea>
                             </div>
                         </div>
                     </div>
@@ -357,42 +337,44 @@
                     <!-- ==================== REHABILITATION PLAN ==================== -->
                     <div class="form-section">
                         <h5><i class="bi bi-clipboard2-pulse me-2"></i>Rehabilitation Plan</h5>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Rehabilitation Goals</label>
+                        <div class="row mb-2">
+                            <div class="col-12">
+                                <label class="form-label">Rehab Goals</label>
                                 <div class="row">
-                                    <div class="col-md-3">
-                                        <div class="form-check">
+                                    <div class="col-lg-2 col-md-3 col-6">
+                                        <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="checkbox" value="Pain reduction" id="goal1">
-                                            <label class="form-check-label" for="goal1">Pain reduction</label>
+                                            <label class="form-check-label small" for="goal1">Pain reduction</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="form-check">
+                                    <div class="col-lg-2 col-md-3 col-6">
+                                        <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="checkbox" value="Improve ROM" id="goal2">
-                                            <label class="form-check-label" for="goal2">Improve range of motion</label>
+                                            <label class="form-check-label small" for="goal2">Improve ROM</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="form-check">
+                                    <div class="col-lg-2 col-md-3 col-6">
+                                        <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="checkbox" value="Strengthen muscles" id="goal3">
-                                            <label class="form-check-label" for="goal3">Strengthen muscles</label>
+                                            <label class="form-check-label small" for="goal3">Strengthen</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="form-check">
+                                    <div class="col-lg-2 col-md-3 col-6">
+                                        <div class="form-check form-check-inline">
                                             <input class="form-check-input" type="checkbox" value="Improve function" id="goal4">
-                                            <label class="form-check-label" for="goal4">Improve function</label>
+                                            <label class="form-check-label small" for="goal4">Improve function</label>
                                         </div>
+                                    </div>
+                                    <div class="col-lg-4 col-md-12">
+                                        <input type="text" class="form-control form-control-sm" id="rehab_goal_other" placeholder="Other goals">
                                     </div>
                                 </div>
-                                <input type="text" class="form-control mt-2" id="rehab_goal_other" placeholder="Other goals (comma-separated)">
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="body_area" class="form-label">Body Area Affected</label>
-                                <select class="form-select" id="body_area">
+                            <div class="col-lg-2 col-md-4 mb-2">
+                                <label for="body_area" class="form-label">Body Area</label>
+                                <select class="form-select form-select-sm" id="body_area">
                                     <option value="">Select</option>
                                     <option value="Neck">Neck</option>
                                     <option value="Shoulder">Shoulder</option>
@@ -403,47 +385,43 @@
                                     <option value="Hip">Hip</option>
                                     <option value="Knee">Knee</option>
                                     <option value="Ankle/Foot">Ankle/Foot</option>
-                                    <option value="Multiple Areas">Multiple Areas</option>
+                                    <option value="Multiple Areas">Multiple</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="frequency" class="form-label">Treatment Frequency</label>
-                                <select class="form-select" id="frequency">
+                            <div class="col-lg-2 col-md-4 mb-2">
+                                <label for="frequency" class="form-label">Frequency</label>
+                                <select class="form-select form-select-sm" id="frequency">
                                     <option value="">Select</option>
                                     <option value="Daily">Daily</option>
-                                    <option value="3 times/week">3 times/week</option>
-                                    <option value="2 times/week">2 times/week</option>
+                                    <option value="3 times/week">3x/week</option>
+                                    <option value="2 times/week">2x/week</option>
                                     <option value="Weekly">Weekly</option>
                                     <option value="As needed">As needed</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="expected_duration" class="form-label">Expected Duration</label>
-                                <select class="form-select" id="expected_duration">
+                            <div class="col-lg-2 col-md-4 mb-2">
+                                <label for="expected_duration" class="form-label">Duration</label>
+                                <select class="form-select form-select-sm" id="expected_duration">
                                     <option value="">Select</option>
                                     <option value="1-2 weeks">1-2 weeks</option>
                                     <option value="2-4 weeks">2-4 weeks</option>
                                     <option value="1-2 months">1-2 months</option>
                                     <option value="2-3 months">2-3 months</option>
                                     <option value="3-6 months">3-6 months</option>
-                                    <option value="Long-term">Long-term (6+ months)</option>
+                                    <option value="Long-term">Long-term</option>
                                 </select>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-2 col-md-4 mb-2">
                                 <label for="precaution" class="form-label">Precautions</label>
-                                <textarea class="form-control" id="precaution" rows="2" placeholder="Clinical precautions for treatment"></textarea>
+                                <textarea class="form-control form-control-sm" id="precaution" rows="2" placeholder="Precautions"></textarea>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-2 col-md-4 mb-2">
                                 <label for="contraindication" class="form-label">Contraindications</label>
-                                <textarea class="form-control" id="contraindication" rows="2" placeholder="Treatment contraindications"></textarea>
+                                <textarea class="form-control form-control-sm" id="contraindication" rows="2" placeholder="Contraindications"></textarea>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-12 mb-3">
+                            <div class="col-lg-2 col-md-4 mb-2">
                                 <label for="doctor_note" class="form-label">Doctor's Notes</label>
-                                <textarea class="form-control" id="doctor_note" rows="2" placeholder="Referring physician notes"></textarea>
+                                <textarea class="form-control form-control-sm" id="doctor_note" rows="2" placeholder="Notes"></textarea>
                             </div>
                         </div>
                     </div>
@@ -453,9 +431,9 @@
                     <div class="form-section">
                         <h5><i class="bi bi-building me-2"></i>Clinic Assignment</h5>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-lg-4 col-md-6 mb-2">
                                 <label for="clinic_id" class="form-label required">Clinic</label>
-                                <select class="form-select" id="clinic_id" required>
+                                <select class="form-select form-select-sm" id="clinic_id" required>
                                     <option value="">Select Clinic</option>
                                 </select>
                                 <div class="invalid-feedback">Please select a clinic</div>
